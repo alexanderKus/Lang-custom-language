@@ -1,0 +1,8 @@
+// Simple comment
+var langugage = "lang";
+/* mulit 
+line
+comment
+*/
+var author = "alex";
+
