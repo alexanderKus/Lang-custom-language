@@ -53,11 +53,11 @@ class TokenKind(Enum):
     EOF = 38
 
 class Token:
-    def __init__(self, kind, lexeme, literal, line_number):
+    def __init__(self, kind, lexeme, literal, line):
         self.kind = kind
         self.lexeme = lexeme
         self.literal = literal
-        self.line_number = line_number
+        self.line = line
 
     def __str__(self):
         return f'TOKEN: {self.kind} {self.lexeme} {self.literal}'
