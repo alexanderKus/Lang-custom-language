@@ -3,6 +3,207 @@
 import sys
 from enum import Enum
 
+
+# GRAMMER
+#
+# expression -> equality ;
+# equality   -> comparison ( ( "!=" | "==" ) comparison )* ;
+# comparison -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
+# term       -> factor ( ( "-" | "+" ) factor )* ;
+# factor     -> unary ( ( "/" | "*" ) unary )* ;
+# unary      -> ( "!" | "-" ) unary
+#               | primary ;
+# primary    -> NUMBER | STRING | "true" | "false" | "nil"
+#               | "(" expression ")" ;
+
+class ParseError(Exception):
+    pass
+
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.current = 0
+
+    def parse(self):
+        try:
+            return self._expression()
+        except ParseError:
+            return None
+
+    def _expression(self):
+        return self._equality()
+
+    def _equality(self):
+        expr = self._comparison()
+        while self._match(TokenKind.BANG_EQUAL, TokenKind.EQUAL_EQUAL):
+            operator = self._previous()
+            right = self._comparison()
+            expr = BinaryExpr(expr, operator, right)
+        return expr
+
+    def _comparison(self):
+        expr = self._term()
+        while self._match(TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.LESS, TokenKind.LESS_EQUAL):
+            operator = self._previous()
+            right = self._term()
+            expr = BinaryExpr(expr, operator, right)
+        return expr
+
+    def _term(self):
+        expr = self._factor()
+        while self._match(TokenKind.MINUS, TokenKind.PLUS):
+            operator = self._previous()
+            right = self._factor()
+            expr = BinaryExpr(expr, operator, right)
+        return expr
+
+    def _factor(self):
+        expr = self._unary()
+        while self._match(TokenKind.SLASH, TokenKind.STAR):
+            operator = self._previous()
+            right = self._unary()
+            expr = BinaryExpr(expr, operator, right)
+        return expr
+
+    def _unary(self):
+        if self._match(TokenKind.BANG, TokenKind.MINUS):
+            operator = self._previous()
+            right = self._unary()
+            return UnaryExpr(operator, right)
+        return self._primary()
+
+    def _primary(self):
+        if self._match(TokenKind.FALSE):
+            return LiteralExpr(False)
+        if self._match(TokenKind.TRUE):
+            return LiteralExpr(True)
+        if self._match(TokenKind.NIL):
+            return LiteralExpr(None)
+        if self._match(TokenKind.NUMBER, TokenKind.STRING):
+            return LiteralExpr(self._previous().literal)
+        if self._match(TokenKind.LEFT_PAREN):
+            expr = self._expression()
+            self._consume(TokenKind.RIGHT_PAREN, 'Expect ")" after expression')
+            return GroupingExpr(expr)
+        raise self._error(self._peek(), 'Expect expression')
+
+    def _match(self, *token_kinds):
+        for token_kind in token_kinds:
+            if self._check(token_kind):
+                self._advance()
+                return True
+        return False
+
+    def _advance(self):
+        if not self._is_at_end():
+            self.current += 1
+        return self._previous()
+
+    def _previous(self):
+        return self.tokens[self.current-1]
+
+    def _peek(self):
+        return self.tokens[self.current]
+
+    def _is_at_end(self):
+        return self._peek().kind == TokenKind.EOF
+
+    def _consume(kind, message):
+        if self._check(kind):
+            return self._advance()
+        raise self._error(self._peek(), message)
+
+    def _check(self, kind):
+        if self._is_at_end():
+            return False
+        return self._peek().kind == kind
+    
+    def _error(self, token, message):
+        ErrorHandler.errorT(token, message)
+        return ParseError()
+
+    def _synchronize(self):
+        self._advance()
+        while not self._is_at_end():
+            if self._previous().kind == TokenKind.SEMICOLON:
+                return
+            if self._peek() in [TokenKind.CLASS, TokenKind.FUN, TokenKind.VAR, 
+                                TokenKind.FOR, TokenKind.IF, TokenKind.WHILE, 
+                                TokenKind.PRINT, TokenKind.RETURN]:
+                return
+            self._advance()
+
+class Visitor:
+    def visit_binary_expr(expr):
+        pass
+
+    def visit_grouping_expr(expr):
+        pass
+
+    def visit_literal_expr(expr):
+        pass
+
+    def visit_unary_expr(expr):
+        pass
+
+class BinaryExpr:
+    def __init__(self, left, operator, right):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+    def accept(self, visitor):
+        return visitor.visit_binary_expr(self)
+
+class GroupingExpr:
+    def __init__(self, expression):
+        self.expression = expression
+
+    def accept(self, visitor):
+        return visitor.visit_grouping_expr(self)
+
+class LiteralExpr:
+    def __init__(self, value):
+        self.value = value
+
+    def accept(self, visitor):
+        return visitor.visit_literal_expr(self)
+
+class UnaryExpr:
+    def __init__(self, operator, right):
+        self.operator = operator
+        self.right = right
+
+    def accept(self, visitor):
+        return visitor.visit_unary_expr(self)
+
+class AstPrinter:
+    def print(self, expr):
+        return expr.accept(self)
+
+    def visit_binary_expr(self, expr):
+        return self._parenthesize(expr.operator.lexeme, expr.left, expr.right)
+
+    def visit_grouping_expr(self, expr):
+        return self._parenthesize('group', expr.expression)
+
+    def visit_literal_expr(self, expr):
+        if expr.value == 'nil':
+            return 'nil'
+        return str(expr.value)
+
+    def visit_unary_expr(self, expr):
+        return self._parenthesize(expr.operator.lexeme, expr.right)
+    
+    def _parenthesize(self, name, *exprs):
+        result = '('
+        result += name 
+        for expr in exprs:
+            result += ' ' 
+            result += expr.accept(self)
+        result += ')'
+        return result
+
 class TokenKind(Enum):
     # Single-character tokens.
     LEFT_PAREN = 0,
@@ -250,9 +451,14 @@ class Lang:
 
         lexer = Lexer(source_code)
         tokens = lexer.tokenize()
+
+        parser = Parser(tokens)
+        expr = parser.parse()
+
+        if self.had_error:
+            return
+        print(AstPrinter().print(expr))
         
-        for token in tokens:
-            print(token)
 
     def _error(line_number, message):
         self._report(line_number, '', message)
@@ -267,11 +473,26 @@ class ErrorHandler:
         ErrorHandler.report(line_number, '', message)
 
     @staticmethod
+    def errorT(token, message):
+        if token.kind == TokenKind.EOF:
+            ErrorHandler.report(token.line, 'at end', message)
+        else:
+            ErrorHandler.report(token.line, f'at "{token.lexeme}"', message)
+
+    @staticmethod
     def report(line, where, message):
         # TODO: come up with better error handling
         print(f'[Line {line}] ERROR: {where} {message}')
 
 if __name__ == '__main__':
+    # expression = BinaryExpr(
+    #         UnaryExpr(
+    #             Token(TokenKind.MINUS, '-', None, 1),
+    #             LiteralExpr(123)), 
+    #         Token(TokenKind.STAR, '*', None, 1), 
+    #         GroupingExpr(LiteralExpr(45.67)))
+    # print(AstPrinter().print(expression))
+
     lang = Lang()
     if len(sys.argv) > 2:
         print("ERROR: USAGE 'main.py <source file>'")
