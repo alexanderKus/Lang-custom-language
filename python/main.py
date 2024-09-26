@@ -36,6 +36,8 @@ class Interpreter:
             t = str(obj)
             if t.endswith('.0'):
                 return t[:-2]
+        if isinstance(obj, str):
+            return f'"{obj}"'
         return str(obj)
     
     def visit_binary_expr(self, expr):
