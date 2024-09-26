@@ -71,6 +71,8 @@ class Interpreter:
             raise RunTimeError(expr.operator, 'Operands must be two numbers or two strings')
         if expr.operator.kind == TokenKind.SLASH:
             self._check_number_operand(expr.operator, left, right)
+            if float(right) == 0:
+                raise RunTimeError(expr.operator, 'Cannot devide by zero')
             return float(left) / float(right)
         if expr.operator.kind == TokenKind.STAR:
             self._check_number_operand(expr.operator, left, right)
