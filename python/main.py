@@ -16,6 +16,106 @@ from enum import Enum
 # primary    -> NUMBER | STRING | "true" | "false" | "nil"
 #               | "(" expression ")" ;
 
+class RunTimeError(Exception):
+    def __init__(self, token, message):
+        super().__init__(message)
+        self.token = token
+
+class Interpreter:
+    def __init__(self):
+        pass
+
+    def interpret(self, expr):
+            value = self._evaluate(expr)
+            print(self._stringify(value))
+
+    def _stringify(self, obj):
+        if obj is None:
+            return 'nil'
+        if isinstance(obj, float):
+            t = str(obj)
+            if t.endswith('.0'):
+                return t[:-2]
+        return str(obj)
+    
+    def visit_binary_expr(self, expr):
+        right = self._evaluate(expr.right)
+        left  = self._evaluate(expr.left)
+        if expr.operator.kind == TokenKind.GREATER:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) > float(right)
+        if expr.operator.kind == TokenKind.GREATER_EQUAL:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) >= float(right)
+        if expr.operator.kind == TokenKind.LESS:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) < float(right)
+        if expr.operator.kind == TokenKind.LESS_EQUAL:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) <= float(right)
+        if expr.operator.kind == TokenKind.MINUS:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) - float(right)
+        if expr.operator.kind == TokenKind.PLUS:
+            if isinstance(left, float) and isinstance(right, float):
+                return float(left) + float(right)
+            if isinstance(left, str) and isinstance(right, str):
+                return str(left) + str(right)
+            raise RunTimeError(expr.operator, 'Operands must be two numbers or two strings')
+        if expr.operator.kind == TokenKind.SLASH:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) / float(right)
+        if expr.operator.kind == TokenKind.STAR:
+            self._check_number_operand(expr.operator, left, right)
+            return float(left) * float(right)
+        if expr.operator.kind == TokenKind.BANG_EQUAL:
+            return not self._is_equal(left, right)
+        if expr.operator.kind == TokenKind.EQUAL_EQUAL:
+            return self._is_equal(left, right)
+        # Unreachable
+        return None
+
+    def visit_grouping_expr(self, expr):
+        return self._evaluate(expr.expression)
+
+    def visit_literal_expr(self, expr):
+        return expr.value
+
+    def visit_unary_expr(self, expr):
+        right = self._evaluate(expr.right)
+        if expr.operator.kind == TokenKind.BANG:
+            return not self._is_truthy(right)
+        if expr.operator.kind == TokenKind.MINUS:
+            self._check_number_operand(expr.operator, right)
+            return -float(right)
+        # Unreachable
+        return None
+
+    def _evaluate(self, expr):
+        return expr.accept(self)
+
+    def _is_truthy(self, obj):
+        if obj == None:
+            return False
+        if isinstance(obj, bool):
+            return bool(obj)
+        return True
+
+    def _is_equal(left, right):
+        if left is None and right is None:
+            return True
+        return left is right
+
+    def _check_number_operand(self, operator, operand):
+        if isinstance(operand, float):
+            return 
+        raise RunTimeError(operand, 'Operand must be a number')
+
+    def _check_number_operand(self, operator, left, right):
+        if isinstance(left, float) and isinstance(right, float):
+            return 
+        raise RunTimeError(operator, 'Operands must be numbers')
+
 class ParseError(Exception):
     pass
 
@@ -108,7 +208,7 @@ class Parser:
     def _is_at_end(self):
         return self._peek().kind == TokenKind.EOF
 
-    def _consume(kind, message):
+    def _consume(self, kind, message):
         if self._check(kind):
             return self._advance()
         raise self._error(self._peek(), message)
@@ -133,18 +233,18 @@ class Parser:
                 return
             self._advance()
 
-class Visitor:
-    def visit_binary_expr(expr):
-        pass
-
-    def visit_grouping_expr(expr):
-        pass
-
-    def visit_literal_expr(expr):
-        pass
-
-    def visit_unary_expr(expr):
-        pass
+# class Visitor:
+#     def visit_binary_expr(self, expr):
+#         pass
+# 
+#     def visit_grouping_expr(self, expr):
+#         pass
+# 
+#     def visit_literal_expr(self, xpr):
+#         pass
+# 
+#     def visit_unary_expr(self, expr):
+#         pass
 
 class BinaryExpr:
     def __init__(self, left, operator, right):
@@ -428,7 +528,9 @@ class Lexer:
 
 class Lang:
     def __init__(self):
+        self.interpreter = Interpreter()
         self.had_error = False
+        self.had_runtime_error = False
 
     def run_prompt(self):
         while True:
@@ -441,7 +543,7 @@ class Lang:
         source_code = ''
         with open(source_file, 'r') as f:
             souce_code = f.read()
-        if self.had_error:
+        if self.had_error or self.had_runtime_error:
             exit(69)
         self.run(souce_code)
 
@@ -457,15 +559,22 @@ class Lang:
 
         if self.had_error:
             return
-        print(AstPrinter().print(expr))
         
+        try:
+            self.interpreter.interpret(expr)
+        except RunTimeError as e:
+            self._runtime_error(e)
 
-    def _error(line_number, message):
+    def _error(self, line_number, message):
         self._report(line_number, '', message)
 
-    def _report(line, where, message):
+    def _report(self, line, where, message):
         ErrorHandler.report(line, where, massage)
         self.had_error = True
+
+    def _runtime_error(self, ex):
+        ErrorHandler.runtime_error(ex)
+        self.had_runtime_error = True
 
 class ErrorHandler:
     @staticmethod
@@ -483,6 +592,10 @@ class ErrorHandler:
     def report(line, where, message):
         # TODO: come up with better error handling
         print(f'[Line {line}] ERROR: {where} {message}')
+        
+    @staticmethod
+    def runtime_error(ex):
+        print(f'{ex}\n[Line {ex.token.line}]')
 
 if __name__ == '__main__':
     # expression = BinaryExpr(
