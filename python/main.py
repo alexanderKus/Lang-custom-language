@@ -61,6 +61,13 @@ class Interpreter:
                 return float(left) + float(right)
             if isinstance(left, str) and isinstance(right, str):
                 return str(left) + str(right)
+            if isinstance(left, str) and isinstance(right, float) or isinstance(left, float) and isinstance(right, str):
+                if isinstance(left, float):
+                    t = str(left)
+                    return t[:-2] + str(right) if t.endswith('.0') else str(left) + str(right)
+                if isinstance(right, float):
+                    t = str(right)
+                    return str(left) + t[:-2] if t.endswith('.0') else str(left) + str(right)
             raise RunTimeError(expr.operator, 'Operands must be two numbers or two strings')
         if expr.operator.kind == TokenKind.SLASH:
             self._check_number_operand(expr.operator, left, right)
