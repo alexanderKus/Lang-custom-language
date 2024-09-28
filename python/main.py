@@ -349,19 +349,6 @@ class Parser:
                 return
             self.advance()
 
-# class Visitor:
-#     def visit_binary_expr(self, expr):
-#         pass
-# 
-#     def visit_grouping_expr(self, expr):
-#         pass
-# 
-#     def visit_literal_expr(self, xpr):
-#         pass
-# 
-#     def visit_unary_expr(self, expr):
-#         pass
-
 class VarStmt:
     def __init__(self, name, initializer):
         self.name = name
