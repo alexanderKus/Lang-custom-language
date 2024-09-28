@@ -6,29 +6,53 @@ from enum import Enum
 
 # GRAMMA
 #
-# program    -> statement* OEF ;
-# statement  -> exprStmt
-#               | printStmt ;
-# exprStmt   -> expression ";" ;
-# printStmt  -> "print" expression ";" ;
-# expression -> equality ;
-# equality   -> comparison ( ( "!=" | "==" ) comparison )* ;
-# comparison -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
-# term       -> factor ( ( "-" | "+" ) factor )* ;
-# factor     -> unary ( ( "/" | "*" ) unary )* ;
-# unary      -> ( "!" | "-" ) unary
-#               | primary ;
-# primary    -> NUMBER | STRING | "true" | "false" | "nil"
-#               | "(" expression ")" ;
+# program     -> declaration* OEF ;
+# declaration -> varDecl
+#                | statement ;
+# varDecl     -> "var" IDENTIFIER ( "=" expression )? ";" ;
+# statement   -> exprStmt
+#                | printStmt ;
+# exprStmt    -> expression ";" ;
+# printStmt   -> "print" expression ";" ;
+# expression  -> assignment ;
+# assignment  -> IDENTIFIER "=" assignment
+#                | equality ;
+# equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
+# comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
+# term        -> factor ( ( "-" | "+" ) factor )* ;
+# factor      -> unary ( ( "/" | "*" ) unary )* ;
+# unary       -> ( "!" | "-" ) unary
+#                | primary ;
+# primary     -> NUMBER | STRING | "true" | "false" | "nil"
+#                | "(" expression ")" ;
+#                | IDENTIFIER ;
 
 class RunTimeError(Exception):
     def __init__(self, token, message):
         super().__init__(message)
         self.token = token
 
+class Environment:
+    def __init__(self):
+        self.values = {}
+    
+    def define(self, name, value):
+        self.values[name] = value
+
+    def get(self, token):
+        if token.lexeme in self.values:
+            return self.values.get(token.lexeme)
+        raise RunTimeError(token, f'Undefined variable {token.lexeme}')
+
+    def assign(self, token, value):
+        if token.lexeme in self.values:
+            self.values[token.lexeme] = value
+            return
+        raise RunTimeError(token, f'Undefined variable "{token.lexeme}"')
+
 class Interpreter:
     def __init__(self):
-        pass
+        self.env = Environment()
 
     def interpret(self, stmts):
         if stmts is None:
@@ -46,6 +70,13 @@ class Interpreter:
         if isinstance(obj, str):
             return f'"{obj}"'
         return str(obj)
+    
+    def visit_var_stmt(self, stmt):
+        value = None
+        if stmt.initializer is not None:
+            value = self.evaluate(stmt.initializer)
+        self.env.define(stmt.name.lexeme, value)
+        return None
 
     def visit_expression_stmt(self, stmt):
         self.evaluate(stmt.expr)
@@ -53,6 +84,14 @@ class Interpreter:
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
         print(self.stringify(value))
+
+    def visit_variable_expr(self, expr):
+        return self.env.get(expr.name)
+
+    def visit_assignment_expr(self, expr):
+        value = self.evaluate(expr.value)
+        self.env.assign(expr.name, value)
+        return value
 
     def visit_binary_expr(self, expr):
         right = self.evaluate(expr.right)
@@ -116,9 +155,6 @@ class Interpreter:
         # Unreachable
         return None
 
-    def visit_expression_stmt(self, stmt):
-        self.evaluate(stmt)
-
     def execute(self, stmt):
         stmt.accept(self)
 
@@ -159,10 +195,29 @@ class Parser:
         try:
             stmts = []
             while not self.is_at_end():
-                stmts.append(self.statement())
+                s = self.declaration()
+                if s is not None:
+                    stmts.append(s)
             return stmts
         except ParseError:
             return None
+    
+    def declaration(self):
+        try:
+            if self.match(TokenKind.VAR):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError:
+            self.synchronize()
+        return None
+    
+    def var_declaration(self):
+        name = self.consume(TokenKind.IDENTIFIER, 'Expect variable name')
+        initializer = None
+        if self.match(TokenKind.EQUAL):
+            initializer = self.expression()
+        self.consume(TokenKind.SEMICOLON, 'Expect ";" after variable declaration')
+        return VarStmt(name, initializer)
 
     def statement(self):
         if self.match(TokenKind.PRINT):
@@ -180,7 +235,17 @@ class Parser:
         return ExpressionStmt(value)
 
     def expression(self):
-        return self.equality()
+        return self.assignment()
+    
+    def assignment(self):
+        expr = self.equality()
+        if self.match(TokenKind.EQUAL):
+            equals = self.previous()
+            value = self.assignment()
+            if isinstance(expr, VariableExpr):
+                return AssignExpr(expr.name, value)
+            self.error(equals, 'Invalid assignment target')
+        return expr
 
     def equality(self):
         expr = self.comparison()
@@ -230,6 +295,8 @@ class Parser:
             return LiteralExpr(None)
         if self.match(TokenKind.NUMBER, TokenKind.STRING):
             return LiteralExpr(self.previous().literal)
+        if self.match(TokenKind.IDENTIFIER):
+            return VariableExpr(self.previous())
         if self.match(TokenKind.LEFT_PAREN):
             expr = self.expression()
             self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after expression')
@@ -295,6 +362,14 @@ class Parser:
 #     def visit_unary_expr(self, expr):
 #         pass
 
+class VarStmt:
+    def __init__(self, name, initializer):
+        self.name = name
+        self.initializer = initializer
+
+    def accept(self, visitor):
+        return visitor.visit_var_stmt(self)
+
 class ExpressionStmt:
     def __init__(self, expr):
         self.expr = expr
@@ -308,6 +383,14 @@ class PrintStmt:
 
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
+
+class AssignExpr:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        
+    def accept(self, visitor):
+        return visitor.visit_assignment_expr(self)
 
 class BinaryExpr:
     def __init__(self, left, operator, right):
@@ -340,14 +423,27 @@ class UnaryExpr:
     def accept(self, visitor):
         return visitor.visit_unary_expr(self)
 
+class VariableExpr:
+    def __init__(self, name):
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_variable_expr(self)
+
 class AstPrinter:
     def print(self, expr):
         return expr.accept(self)
+
+    def visit_var_stmt(self, stmt):
+        pass
 
     def visit_expression_stmt(self, stmt):
         pass
 
     def visit_print_stmt(self, stmt):
+        pass
+
+    def visit_assignment_expr(self, expr):
         pass
 
     def visit_binary_expr(self, expr):
@@ -363,6 +459,9 @@ class AstPrinter:
 
     def visit_unary_expr(self, expr):
         return self.parenthesize(expr.operator.lexeme, expr.right)
+
+    def visit_variable_expr(self, expr):
+        pass
     
     def parenthesize(self, name, *exprs):
         result = '('
