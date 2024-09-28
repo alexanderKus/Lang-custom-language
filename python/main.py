@@ -6,6 +6,11 @@ from enum import Enum
 
 # GRAMMER
 #
+# program    -> statement* OEF ;
+# statement  -> exprStmt
+#               | printStmt ;
+# exprStmt   -> expresssion ";" ;
+# printStmt  -> "print" expression ";" ;
 # expression -> equality ;
 # equality   -> comparison ( ( "!=" | "==" ) comparison )* ;
 # comparison -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
@@ -25,9 +30,11 @@ class Interpreter:
     def __init__(self):
         pass
 
-    def interpret(self, expr):
-            value = self._evaluate(expr)
-            print(self._stringify(value))
+    def interpret(self, stmts):
+        if stmts is None:
+            return
+        for stmt in [s for s in stmts if s is not None]:
+            self._execute(stmt)
 
     def _stringify(self, obj):
         if obj is None:
@@ -39,7 +46,14 @@ class Interpreter:
         if isinstance(obj, str):
             return f'"{obj}"'
         return str(obj)
-    
+
+    def visit_expression_stmt(self, stmt):
+        self._evaluate(stmt.expr)
+
+    def visit_print_stmt(self, stmt):
+        value = self._evaluate(stmt.expr)
+        print(self._stringify(value))
+
     def visit_binary_expr(self, expr):
         right = self._evaluate(expr.right)
         left  = self._evaluate(expr.left)
@@ -102,6 +116,12 @@ class Interpreter:
         # Unreachable
         return None
 
+    def visit_expression_stmt(self, stmt):
+        self._evaluate(stmt);
+
+    def _execute(self, stmt):
+        stmt.accept(self)
+
     def _evaluate(self, expr):
         return expr.accept(self)
 
@@ -137,9 +157,27 @@ class Parser:
 
     def parse(self):
         try:
-            return self._expression()
+            stmts = []
+            while not self._is_at_end():
+                stmts.append(self._statement())
+            return stmts
         except ParseError:
             return None
+
+    def _statement(self):
+        if self._match(TokenKind.PRINT):
+            return self._print_statement()
+        return self._expersssion_statement()
+
+    def _print_statement(self):
+        value = self._expression()
+        self._consume(TokenKind.SEMICOLON, 'Expected ";" after value')
+        return PrintStmt(value)
+
+    def _expersssion_statement(self):
+        value = self._expression()
+        self._consume(TokenKind.SEMICOLON, 'Expected ";" after expression')
+        return ExpressionStmt(value)
 
     def _expression(self):
         return self._equality()
@@ -257,6 +295,20 @@ class Parser:
 #     def visit_unary_expr(self, expr):
 #         pass
 
+class ExpressionStmt:
+    def __init__(self, expr):
+        self.expr = expr
+
+    def accept(self, visitor):
+        return visitor.visit_expression_stmt(self)
+
+class PrintStmt:
+    def __init__(self, expr):
+        self.expr = expr
+
+    def accept(self, visitor):
+        return visitor.visit_print_stmt(self)
+
 class BinaryExpr:
     def __init__(self, left, operator, right):
         self.left = left
@@ -291,6 +343,12 @@ class UnaryExpr:
 class AstPrinter:
     def print(self, expr):
         return expr.accept(self)
+
+    def visit_expression_stmt(self, stmt):
+        pass
+
+    def visit_print_stmt(self, stmt):
+        pass
 
     def visit_binary_expr(self, expr):
         return self._parenthesize(expr.operator.lexeme, expr.left, expr.right)
@@ -566,13 +624,13 @@ class Lang:
         tokens = lexer.tokenize()
 
         parser = Parser(tokens)
-        expr = parser.parse()
+        stmts = parser.parse()
 
         if self.had_error:
             return
         
         try:
-            self.interpreter.interpret(expr)
+            self.interpreter.interpret(stmts)
         except RunTimeError as e:
             self._runtime_error(e)
 
