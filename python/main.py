@@ -3,7 +3,6 @@
 import sys
 from enum import Enum
 
-
 # GRAMMA
 #
 # program     -> declaration* OEF ;
@@ -548,7 +547,6 @@ class Lexer:
         while not self.is_at_end():
             self.start = self.current
             self.scan_token()
-
         self.tokens.append(Token(TokenKind.EOF, '', None, self.line))
         return self.tokens
 
@@ -621,11 +619,8 @@ class Lexer:
             return False
         if self.source_code[self.current] != expected:
             return False
-
         self.current += 1
         return True
-
-        return self.source_code[self.current]
 
     def peek(self):
         if self.is_at_end():
@@ -705,16 +700,12 @@ class Lang:
     def run(self, source_code):
         if source_code == 'exit()':
             exit(0)
-
         lexer = Lexer(source_code)
         tokens = lexer.tokenize()
-
         parser = Parser(tokens)
         stmts = parser.parse()
-
         if self.had_error:
             return
-        
         try:
             self.interpreter.interpret(stmts)
         except RunTimeError as e:
@@ -753,14 +744,6 @@ class ErrorHandler:
         print(f'{ex}\n[Line {ex.token.line}]')
 
 if __name__ == '__main__':
-    # expression = BinaryExpr(
-    #         UnaryExpr(
-    #             Token(TokenKind.MINUS, '-', None, 1),
-    #             LiteralExpr(123)), 
-    #         Token(TokenKind.STAR, '*', None, 1), 
-    #         GroupingExpr(LiteralExpr(45.67)))
-    # print(AstPrinter().print(expression))
-
     lang = Lang()
     if len(sys.argv) > 2:
         print("ERROR: USAGE 'main.py <source file>'")
