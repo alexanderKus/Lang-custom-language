@@ -97,7 +97,10 @@ class Interpreter:
         return None
 
     def visit_variable_expr(self, expr):
-        return self.env.get(expr.name)
+        value = self.env.get(expr.name)
+        if value is not None:
+            return value
+        raise RunTimeError(expr.name, 'Accessing uninitialized variable')
 
     def visit_assignment_expr(self, expr):
         value = self.evaluate(expr.value)
