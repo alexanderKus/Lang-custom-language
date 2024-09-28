@@ -65,7 +65,7 @@ class Interpreter:
         if stmts is None:
             return
         for stmt in [s for s in stmts if s is not None]:
-            self.execute(stmt)
+            yield self.execute(stmt)
 
     def stringify(self, obj):
         if obj is None:
@@ -86,7 +86,7 @@ class Interpreter:
         return None
 
     def visit_expression_stmt(self, stmt):
-        self.evaluate(stmt.expr)
+        return self.evaluate(stmt.expr)
 
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
@@ -167,7 +167,7 @@ class Interpreter:
         return None
 
     def execute(self, stmt):
-        stmt.accept(self)
+        return stmt.accept(self)
 
     def execute_block(self, stmts, env):
         prev = self.env
@@ -744,7 +744,9 @@ class Lang:
         if self.had_error:
             return
         try:
-            self.interpreter.interpret(stmts)
+            gen = self.interpreter.interpret(stmts)
+            for v in [g for g in gen if g is not None]:
+                print(v)
         except RunTimeError as e:
             self.runtime_error(e)
 
