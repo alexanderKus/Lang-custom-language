@@ -4,12 +4,12 @@ import sys
 from enum import Enum
 
 
-# GRAMMER
+# GRAMMA
 #
 # program    -> statement* OEF ;
 # statement  -> exprStmt
 #               | printStmt ;
-# exprStmt   -> expresssion ";" ;
+# exprStmt   -> expression ";" ;
 # printStmt  -> "print" expression ";" ;
 # expression -> equality ;
 # equality   -> comparison ( ( "!=" | "==" ) comparison )* ;
@@ -34,9 +34,9 @@ class Interpreter:
         if stmts is None:
             return
         for stmt in [s for s in stmts if s is not None]:
-            self._execute(stmt)
+            self.execute(stmt)
 
-    def _stringify(self, obj):
+    def stringify(self, obj):
         if obj is None:
             return 'nil'
         if isinstance(obj, float):
@@ -48,29 +48,29 @@ class Interpreter:
         return str(obj)
 
     def visit_expression_stmt(self, stmt):
-        self._evaluate(stmt.expr)
+        self.evaluate(stmt.expr)
 
     def visit_print_stmt(self, stmt):
-        value = self._evaluate(stmt.expr)
-        print(self._stringify(value))
+        value = self.evaluate(stmt.expr)
+        print(self.stringify(value))
 
     def visit_binary_expr(self, expr):
-        right = self._evaluate(expr.right)
-        left  = self._evaluate(expr.left)
+        right = self.evaluate(expr.right)
+        left  = self.evaluate(expr.left)
         if expr.operator.kind == TokenKind.GREATER:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) > float(right)
         if expr.operator.kind == TokenKind.GREATER_EQUAL:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) >= float(right)
         if expr.operator.kind == TokenKind.LESS:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) < float(right)
         if expr.operator.kind == TokenKind.LESS_EQUAL:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) <= float(right)
         if expr.operator.kind == TokenKind.MINUS:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) - float(right)
         if expr.operator.kind == TokenKind.PLUS:
             if isinstance(left, float) and isinstance(right, float):
@@ -86,63 +86,63 @@ class Interpreter:
                     return str(left) + t[:-2] if t.endswith('.0') else str(left) + str(right)
             raise RunTimeError(expr.operator, 'Operands must be two numbers or two strings')
         if expr.operator.kind == TokenKind.SLASH:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             if float(right) == 0:
                 raise RunTimeError(expr.operator, 'Cannot devide by zero')
             return float(left) / float(right)
         if expr.operator.kind == TokenKind.STAR:
-            self._check_number_operand(expr.operator, left, right)
+            self.check_number_operand(expr.operator, left, right)
             return float(left) * float(right)
         if expr.operator.kind == TokenKind.BANG_EQUAL:
-            return not self._is_equal(left, right)
+            return not self.is_equal(left, right)
         if expr.operator.kind == TokenKind.EQUAL_EQUAL:
-            return self._is_equal(left, right)
+            return self.is_equal(left, right)
         # Unreachable
         return None
 
     def visit_grouping_expr(self, expr):
-        return self._evaluate(expr.expression)
+        return self.evaluate(expr.expression)
 
     def visit_literal_expr(self, expr):
         return expr.value
 
     def visit_unary_expr(self, expr):
-        right = self._evaluate(expr.right)
+        right = self.evaluate(expr.right)
         if expr.operator.kind == TokenKind.BANG:
-            return not self._is_truthy(right)
+            return not self.is_truthy(right)
         if expr.operator.kind == TokenKind.MINUS:
-            self._check_number_operand(expr.operator, right)
+            self.check_number_operand(expr.operator, right)
             return -float(right)
         # Unreachable
         return None
 
     def visit_expression_stmt(self, stmt):
-        self._evaluate(stmt);
+        self.evaluate(stmt)
 
-    def _execute(self, stmt):
+    def execute(self, stmt):
         stmt.accept(self)
 
-    def _evaluate(self, expr):
+    def evaluate(self, expr):
         return expr.accept(self)
 
-    def _is_truthy(self, obj):
+    def is_truthy(self, obj):
         if obj == None:
             return False
         if isinstance(obj, bool):
             return bool(obj)
         return True
 
-    def _is_equal(left, right):
+    def is_equal(self, left, right):
         if left is None and right is None:
             return True
-        return left is right
+        return left == right
 
-    def _check_number_operand(self, operator, operand):
+    def check_number_operand(self, operator, operand):
         if isinstance(operand, float):
             return 
         raise RunTimeError(operand, 'Operand must be a number')
 
-    def _check_number_operand(self, operator, left, right):
+    def check_number_operand(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float):
             return 
         raise RunTimeError(operator, 'Operands must be numbers')
@@ -158,129 +158,129 @@ class Parser:
     def parse(self):
         try:
             stmts = []
-            while not self._is_at_end():
-                stmts.append(self._statement())
+            while not self.is_at_end():
+                stmts.append(self.statement())
             return stmts
         except ParseError:
             return None
 
-    def _statement(self):
-        if self._match(TokenKind.PRINT):
-            return self._print_statement()
-        return self._expersssion_statement()
+    def statement(self):
+        if self.match(TokenKind.PRINT):
+            return self.print_statement()
+        return self.expression_statement()
 
-    def _print_statement(self):
-        value = self._expression()
-        self._consume(TokenKind.SEMICOLON, 'Expected ";" after value')
+    def print_statement(self):
+        value = self.expression()
+        self.consume(TokenKind.SEMICOLON, 'Expected ";" after value')
         return PrintStmt(value)
 
-    def _expersssion_statement(self):
-        value = self._expression()
-        self._consume(TokenKind.SEMICOLON, 'Expected ";" after expression')
+    def expression_statement(self):
+        value = self.expression()
+        self.consume(TokenKind.SEMICOLON, 'Expected ";" after expression')
         return ExpressionStmt(value)
 
-    def _expression(self):
-        return self._equality()
+    def expression(self):
+        return self.equality()
 
-    def _equality(self):
-        expr = self._comparison()
-        while self._match(TokenKind.BANG_EQUAL, TokenKind.EQUAL_EQUAL):
-            operator = self._previous()
-            right = self._comparison()
+    def equality(self):
+        expr = self.comparison()
+        while self.match(TokenKind.BANG_EQUAL, TokenKind.EQUAL_EQUAL):
+            operator = self.previous()
+            right = self.comparison()
             expr = BinaryExpr(expr, operator, right)
         return expr
 
-    def _comparison(self):
-        expr = self._term()
-        while self._match(TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.LESS, TokenKind.LESS_EQUAL):
-            operator = self._previous()
-            right = self._term()
+    def comparison(self):
+        expr = self.term()
+        while self.match(TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.LESS, TokenKind.LESS_EQUAL):
+            operator = self.previous()
+            right = self.term()
             expr = BinaryExpr(expr, operator, right)
         return expr
 
-    def _term(self):
-        expr = self._factor()
-        while self._match(TokenKind.MINUS, TokenKind.PLUS):
-            operator = self._previous()
-            right = self._factor()
+    def term(self):
+        expr = self.factor()
+        while self.match(TokenKind.MINUS, TokenKind.PLUS):
+            operator = self.previous()
+            right = self.factor()
             expr = BinaryExpr(expr, operator, right)
         return expr
 
-    def _factor(self):
-        expr = self._unary()
-        while self._match(TokenKind.SLASH, TokenKind.STAR):
-            operator = self._previous()
-            right = self._unary()
+    def factor(self):
+        expr = self.unary()
+        while self.match(TokenKind.SLASH, TokenKind.STAR):
+            operator = self.previous()
+            right = self.unary()
             expr = BinaryExpr(expr, operator, right)
         return expr
 
-    def _unary(self):
-        if self._match(TokenKind.BANG, TokenKind.MINUS):
-            operator = self._previous()
-            right = self._unary()
+    def unary(self):
+        if self.match(TokenKind.BANG, TokenKind.MINUS):
+            operator = self.previous()
+            right = self.unary()
             return UnaryExpr(operator, right)
-        return self._primary()
+        return self.primary()
 
-    def _primary(self):
-        if self._match(TokenKind.FALSE):
+    def primary(self):
+        if self.match(TokenKind.FALSE):
             return LiteralExpr(False)
-        if self._match(TokenKind.TRUE):
+        if self.match(TokenKind.TRUE):
             return LiteralExpr(True)
-        if self._match(TokenKind.NIL):
+        if self.match(TokenKind.NIL):
             return LiteralExpr(None)
-        if self._match(TokenKind.NUMBER, TokenKind.STRING):
-            return LiteralExpr(self._previous().literal)
-        if self._match(TokenKind.LEFT_PAREN):
-            expr = self._expression()
-            self._consume(TokenKind.RIGHT_PAREN, 'Expect ")" after expression')
+        if self.match(TokenKind.NUMBER, TokenKind.STRING):
+            return LiteralExpr(self.previous().literal)
+        if self.match(TokenKind.LEFT_PAREN):
+            expr = self.expression()
+            self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after expression')
             return GroupingExpr(expr)
-        raise self._error(self._peek(), 'Expect expression')
+        raise self.error(self.peek(), 'Expect expression')
 
-    def _match(self, *token_kinds):
+    def match(self, *token_kinds):
         for token_kind in token_kinds:
-            if self._check(token_kind):
-                self._advance()
+            if self.check(token_kind):
+                self.advance()
                 return True
         return False
 
-    def _advance(self):
-        if not self._is_at_end():
+    def advance(self):
+        if not self.is_at_end():
             self.current += 1
-        return self._previous()
+        return self.previous()
 
-    def _previous(self):
+    def previous(self):
         return self.tokens[self.current-1]
 
-    def _peek(self):
+    def peek(self):
         return self.tokens[self.current]
 
-    def _is_at_end(self):
-        return self._peek().kind == TokenKind.EOF
+    def is_at_end(self):
+        return self.peek().kind == TokenKind.EOF
 
-    def _consume(self, kind, message):
-        if self._check(kind):
-            return self._advance()
-        raise self._error(self._peek(), message)
+    def consume(self, kind, message):
+        if self.check(kind):
+            return self.advance()
+        raise self.error(self.peek(), message)
 
-    def _check(self, kind):
-        if self._is_at_end():
+    def check(self, kind):
+        if self.is_at_end():
             return False
-        return self._peek().kind == kind
+        return self.peek().kind == kind
     
-    def _error(self, token, message):
+    def error(self, token, message):
         ErrorHandler.errorT(token, message)
         return ParseError()
 
-    def _synchronize(self):
-        self._advance()
-        while not self._is_at_end():
-            if self._previous().kind == TokenKind.SEMICOLON:
+    def synchronize(self):
+        self.advance()
+        while not self.is_at_end():
+            if self.previous().kind == TokenKind.SEMICOLON:
                 return
-            if self._peek() in [TokenKind.CLASS, TokenKind.FUN, TokenKind.VAR, 
+            if self.peek() in [TokenKind.CLASS, TokenKind.FUN, TokenKind.VAR, 
                                 TokenKind.FOR, TokenKind.IF, TokenKind.WHILE, 
                                 TokenKind.PRINT, TokenKind.RETURN]:
                 return
-            self._advance()
+            self.advance()
 
 # class Visitor:
 #     def visit_binary_expr(self, expr):
@@ -351,10 +351,10 @@ class AstPrinter:
         pass
 
     def visit_binary_expr(self, expr):
-        return self._parenthesize(expr.operator.lexeme, expr.left, expr.right)
+        return self.parenthesize(expr.operator.lexeme, expr.left, expr.right)
 
     def visit_grouping_expr(self, expr):
-        return self._parenthesize('group', expr.expression)
+        return self.parenthesize('group', expr.expression)
 
     def visit_literal_expr(self, expr):
         if expr.value == 'nil':
@@ -362,9 +362,9 @@ class AstPrinter:
         return str(expr.value)
 
     def visit_unary_expr(self, expr):
-        return self._parenthesize(expr.operator.lexeme, expr.right)
+        return self.parenthesize(expr.operator.lexeme, expr.right)
     
-    def _parenthesize(self, name, *exprs):
+    def parenthesize(self, name, *exprs):
         result = '('
         result += name 
         for expr in exprs:
@@ -429,7 +429,7 @@ class Token:
         self.literal = literal
         self.line = line
 
-    def __str__(self):
+    def _str__(self):
         return f'TOKEN: {self.kind} {self.lexeme} {self.literal}'
 
 class Lexer:
@@ -459,79 +459,79 @@ class Lexer:
         }
 
     def tokenize(self):
-        while not self._is_at_end():
+        while not self.is_at_end():
             self.start = self.current
-            self._scan_token()
+            self.scan_token()
 
         self.tokens.append(Token(TokenKind.EOF, '', None, self.line))
         return self.tokens
 
-    def _is_at_end(self):
+    def is_at_end(self):
         return self.current >= len(self.source_code)
 
-    def _scan_token(self):
-        c = self._advance()
+    def scan_token(self):
+        c = self.advance()
         if c == '(':
-            self._add_token(TokenKind.LEFT_PAREN, None)
+            self.add_token(TokenKind.LEFT_PAREN, None)
         elif c == ')':
-            self._add_token(TokenKind.RIGHT_PAREN, None)
+            self.add_token(TokenKind.RIGHT_PAREN, None)
         elif c == '{':
-            self._add_token(TokenKind.LEFT_BRACE, None)
+            self.add_token(TokenKind.LEFT_BRACE, None)
         elif c == '}':
-            self._add_token(TokenKind.RIGHT_BRACE, None)
+            self.add_token(TokenKind.RIGHT_BRACE, None)
         elif c == ',':
-            self._add_token(TokenKind.COMMA, None)
+            self.add_token(TokenKind.COMMA, None)
         elif c == '.':
-            self._add_token(TokenKind.DOT, None)
+            self.add_token(TokenKind.DOT, None)
         elif c == '-':
-            self._add_token(TokenKind.MINUS, None)
+            self.add_token(TokenKind.MINUS, None)
         elif c == '+':
-            self._add_token(TokenKind.PLUS, None)
+            self.add_token(TokenKind.PLUS, None)
         elif c == ';':
-            self._add_token(TokenKind.SEMICOLON, None)
+            self.add_token(TokenKind.SEMICOLON, None)
         elif c == '*':
-            self._add_token(TokenKind.STAR, None)
+            self.add_token(TokenKind.STAR, None)
         elif c == '!':
-            self._add_token(TokenKind.BANG_EQUAL if self._match('=') else TokenKind.BANG, None)
+            self.add_token(TokenKind.BANG_EQUAL if self.match('=') else TokenKind.BANG, None)
         elif c == '=':
-            self._add_token(TokenKind.EQUAL_EQUAL if self._match('=') else TokenKind.EQUAL, None)
+            self.add_token(TokenKind.EQUAL_EQUAL if self.match('=') else TokenKind.EQUAL, None)
         elif c == '<':
-            self._add_token(TokenKind.LESS_EQUAL if self._match('=') else TokenKind.LESS, None)
+            self.add_token(TokenKind.LESS_EQUAL if self.match('=') else TokenKind.LESS, None)
         elif c == '>':
-            self._add_token(TokenKind.GREATED_EQUAL if self._match('=') else TokenKind.GREATED, None)
+            self.add_token(TokenKind.GREATER_EQUAL if self.match('=') else TokenKind.GREATER, None)
         elif c == '/':
-            if self._match('/'):
-                while self._peek() != '\n' and not self._is_at_end():
-                    self._advance()
-            elif self._match('*'): 
-                while self._peek() != '*' and self._next_peek() != '/' and not self._is_at_end():
-                    if self._peek() == '\n':
+            if self.match('/'):
+                while self.peek() != '\n' and not self.is_at_end():
+                    self.advance()
+            elif self.match('*'): 
+                while self.peek() != '*' and self.next_peek() != '/' and not self.is_at_end():
+                    if self.peek() == '\n':
                         self.line += 1
-                    self._advance()
-                self._advance() # eat *
-                self._advance() # eat /
+                    self.advance()
+                self.advance() # eat *
+                self.advance() # eat /
             else:
-                self._add_token(TokenKind.SLASH, None)
+                self.add_token(TokenKind.SLASH, None)
         elif c == ' ' or c == '\b' or c == '\r':
             # Skipping white spaces
             pass
         elif c == '\n':
             self.line += 1
         elif c == '"':
-            self._string()
-        elif self._is_digit(c):
-            self._number()
-        elif self._is_alpha(c):
-            self._identifier()
+            self.string()
+        elif self.is_digit(c):
+            self.number()
+        elif self.is_alpha(c):
+            self.identifier()
         else:
             ErrorHandler.error(self.line, 'Unexpected character.')
 
-    def _advance(self):
+    def advance(self):
         self.current += 1
         return self.source_code[self.current-1]
     
-    def _match(self, expected):
-        if self._is_at_end():
+    def match(self, expected):
+        if self.is_at_end():
             return False
         if self.source_code[self.current] != expected:
             return False
@@ -541,57 +541,57 @@ class Lexer:
 
         return self.source_code[self.current]
 
-    def _peek(self):
-        if self._is_at_end():
+    def peek(self):
+        if self.is_at_end():
             return '\0'
         return self.source_code[self.current]
 
-    def _next_peek(self):
+    def next_peek(self):
         if self.current + 1 >= len(self.source_code):
             return '\0'
         return self.source_code[self.current+1]
 
-    def _string(self):
-        while self._peek() != '"' and not self._is_at_end():
-            if self._peek() == '\n':
+    def string(self):
+        while self.peek() != '"' and not self.is_at_end():
+            if self.peek() == '\n':
                 self.line += 1
-            self._advance()
-        if self._is_at_end():
+            self.advance()
+        if self.is_at_end():
             ErrorHandler.error(self.line, 'Unterminated string.')
             return
-        self._advance()
+        self.advance()
         value = self.source_code[self.start+1:self.current-1]
-        self._add_token(TokenKind.STRING, value)
+        self.add_token(TokenKind.STRING, value)
 
-    def _number(self):
-        while self._is_digit(self._peek()):
-            self._advance()
-        if self._peek() == '.' and self._is_digit(self._next_peek()):
-            self._advance()
-            while self._is_digit(self._peek()):
-                self._advance()
-        self._add_token(TokenKind.NUMBER, float(self.source_code[self.start:self.current]))
+    def number(self):
+        while self.is_digit(self.peek()):
+            self.advance()
+        if self.peek() == '.' and self.is_digit(self.next_peek()):
+            self.advance()
+            while self.is_digit(self.peek()):
+                self.advance()
+        self.add_token(TokenKind.NUMBER, float(self.source_code[self.start:self.current]))
 
-    def _identifier(self):
-        while self._is_alpha_numeric(self._peek()):
-            self._advance()
+    def identifier(self):
+        while self.is_alpha_numeric(self.peek()):
+            self.advance()
         text = self.source_code[self.start:self.current]
         type_ = self.keywords.get(text)
         if type_ is not None:
-            self._add_token(type_, None)
+            self.add_token(type_, None)
         else:
-            self._add_token(TokenKind.IDENTIFIER, None)
+            self.add_token(TokenKind.IDENTIFIER, None)
 
-    def _is_alpha(self, c):
+    def is_alpha(self, c):
         return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c == '_')
 
-    def _is_digit(selft, c):
+    def is_digit(self, c):
         return c >= '0' and c <= '9'
 
-    def _is_alpha_numeric(self, c):
-        return self._is_alpha(c) or self._is_digit(c)
+    def is_alpha_numeric(self, c):
+        return self.is_alpha(c) or self.is_digit(c)
 
-    def _add_token(self, kind, literal):
+    def add_token(self, kind, literal):
         text = self.source_code[self.start:self.current]
         self.tokens.append(Token(kind, text, literal, self.line))
 
@@ -611,10 +611,10 @@ class Lang:
     def run_file(self, source_file):
         source_code = ''
         with open(source_file, 'r') as f:
-            souce_code = f.read()
+            source_code = f.read()
         if self.had_error or self.had_runtime_error:
             exit(69)
-        self.run(souce_code)
+        self.run(source_code)
 
     def run(self, source_code):
         if source_code == 'exit()':
@@ -632,16 +632,16 @@ class Lang:
         try:
             self.interpreter.interpret(stmts)
         except RunTimeError as e:
-            self._runtime_error(e)
+            self.runtime_error(e)
 
-    def _error(self, line_number, message):
-        self._report(line_number, '', message)
+    def error(self, line_number, message):
+        self.report(line_number, '', message)
 
-    def _report(self, line, where, message):
-        ErrorHandler.report(line, where, massage)
+    def report(self, line, where, message):
+        ErrorHandler.report(line, where, message)
         self.had_error = True
 
-    def _runtime_error(self, ex):
+    def runtime_error(self, ex):
         ErrorHandler.runtime_error(ex)
         self.had_runtime_error = True
 
