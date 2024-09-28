@@ -10,9 +10,11 @@ from enum import Enum
 #                | statement ;
 # varDecl     -> "var" IDENTIFIER ( "=" expression )? ";" ;
 # statement   -> exprStmt
-#                | printStmt ;
+#                | printStmt 
+#                | block ;
 # exprStmt    -> expression ";" ;
 # printStmt   -> "print" expression ";" ;
+# block       -> "{" declaration* "}" ;
 # expression  -> assignment ;
 # assignment  -> IDENTIFIER "=" assignment
 #                | equality ;
@@ -32,7 +34,8 @@ class RunTimeError(Exception):
         self.token = token
 
 class Environment:
-    def __init__(self):
+    def __init__(self, enclosing = None):
+        self.enclosing = enclosing
         self.values = {}
     
     def define(self, name, value):
@@ -41,11 +44,16 @@ class Environment:
     def get(self, token):
         if token.lexeme in self.values:
             return self.values.get(token.lexeme)
+        if self.enclosing is not None:
+            return self.enclosing.get(token)
         raise RunTimeError(token, f'Undefined variable {token.lexeme}')
 
     def assign(self, token, value):
         if token.lexeme in self.values:
             self.values[token.lexeme] = value
+            return
+        if self.enclosing is not None:
+            self.enclosing.assign(token, value)
             return
         raise RunTimeError(token, f'Undefined variable "{token.lexeme}"')
 
@@ -83,6 +91,10 @@ class Interpreter:
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
         print(self.stringify(value))
+
+    def visit_block_stmt(self, stmt):
+        self.execute_block(stmt.stmts, Environment(self.env))
+        return None
 
     def visit_variable_expr(self, expr):
         return self.env.get(expr.name)
@@ -157,6 +169,15 @@ class Interpreter:
     def execute(self, stmt):
         stmt.accept(self)
 
+    def execute_block(self, stmts, env):
+        prev = self.env
+        try:
+            self.env = env
+            for stmt in stmts:
+                self.execute(stmt)
+        finally:
+            self.env = prev
+
     def evaluate(self, expr):
         return expr.accept(self)
 
@@ -221,12 +242,21 @@ class Parser:
     def statement(self):
         if self.match(TokenKind.PRINT):
             return self.print_statement()
+        if self.match(TokenKind.LEFT_BRACE):
+            return BlockStmt(self.block())
         return self.expression_statement()
 
     def print_statement(self):
         value = self.expression()
         self.consume(TokenKind.SEMICOLON, 'Expected ";" after value')
         return PrintStmt(value)
+
+    def block(self):
+        stmts = []
+        while not self.check(TokenKind.RIGHT_BRACE) and not self.is_at_end():
+            stmts.append(self.declaration())
+        self.consume(TokenKind.RIGHT_BRACE, 'Expect } after block')
+        return stmts
 
     def expression_statement(self):
         value = self.expression()
@@ -347,6 +377,13 @@ class Parser:
                                 TokenKind.PRINT, TokenKind.RETURN]:
                 return
             self.advance()
+
+class BlockStmt:
+    def __init__(self, stmts):
+        self.stmts = stmts
+
+    def accept(self, visitor):
+        return visitor.visit_block_stmt(self)
 
 class VarStmt:
     def __init__(self, name, initializer):
