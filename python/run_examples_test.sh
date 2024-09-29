@@ -3,7 +3,7 @@
 search_dir=../examples
 for entry in "$search_dir"/*
 do
-  python3 main.py "$entry" > /dev/null
+  python3 lang.py "$entry" > /dev/null
   result=`echo $?`
   if [ "$result" -eq 0 ]
   then
