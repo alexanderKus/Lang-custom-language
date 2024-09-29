@@ -289,6 +289,8 @@ class Parser:
         return self.expression_statement()
     
     def for_statement(self):
+        # For loop is syntactic sugar of while loop,
+        # so, for loop is desugar into while loop
         self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "for"')
         initializer = None
         if self.match(TokenKind.SEMICOLON):
