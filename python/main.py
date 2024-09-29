@@ -12,10 +12,12 @@ from enum import Enum
 # statement   -> exprStmt
 #                | ifStmt
 #                | printStmt 
+#                | whileStmt
 #                | block ;
 # exprStmt    -> expression ";" ;
 # ifStmt      -> "if" "(" expression ")" statement ( "else" statement )? ;
 # printStmt   -> "print" expression ";" ;
+# whileStmt   -> "while" "(" expression ")" statement ;
 # block       -> "{" declaration* "}" ;
 # expression  -> assignment ;
 # assignment  -> IDENTIFIER "=" assignment
@@ -102,6 +104,11 @@ class Interpreter:
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
         print(self.stringify(value))
+
+    def visit_while_stmt(self, stmt):
+        while self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.body)
+        return None
 
     def visit_block_stmt(self, stmt):
         self.execute_block(stmt.stmts, Environment(self.env))
@@ -269,6 +276,8 @@ class Parser:
             return self.if_statement()
         if self.match(TokenKind.PRINT):
             return self.print_statement()
+        if self.match(TokenKind.WHILE):
+            return self.while_statement()
         if self.match(TokenKind.LEFT_BRACE):
             return BlockStmt(self.block())
         return self.expression_statement()
@@ -285,8 +294,15 @@ class Parser:
 
     def print_statement(self):
         value = self.expression()
-        self.consume(TokenKind.SEMICOLON, 'Expected ";" after value')
+        self.consume(TokenKind.SEMICOLON, 'Expect ";" after value')
         return PrintStmt(value)
+    
+    def while_statement(self):
+        self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "while"')
+        expr = self.expression()
+        self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after "while"')
+        stmt = self.statement()
+        return WhileStmt(expr, stmt)
 
     def block(self):
         stmts = []
@@ -430,6 +446,14 @@ class Parser:
                                 TokenKind.PRINT, TokenKind.RETURN]:
                 return
             self.advance()
+
+class WhileStmt:
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+
+    def accept(self, visitor):
+        return visitor.visit_while_stmt(self)
 
 class IfStmt:
     def __init__(self, condition, then_branch, else_branch):
