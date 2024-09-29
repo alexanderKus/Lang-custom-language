@@ -14,6 +14,7 @@ from enum import Enum
 #                | ifStmt
 #                | printStmt 
 #                | whileStmt
+#                | break
 #                | block ;
 # forStmt     -> "for" "(" ( varDecl | exprStmt| ";" ) 
 #                  expression? ";" 
@@ -42,6 +43,10 @@ class RunTimeError(Exception):
     def __init__(self, token, message):
         super().__init__(message)
         self.token = token
+
+class BreakException(RunTimeError):
+    def __init__(self, token, message='Must be inside a loop to use "break"'):
+        super().__init__(token, message)
 
 class Environment:
     def __init__(self, enclosing = None):
@@ -110,13 +115,20 @@ class Interpreter:
         print(self.stringify(value))
 
     def visit_while_stmt(self, stmt):
-        while self.is_truthy(self.evaluate(stmt.condition)):
-            self.execute(stmt.body)
+        try:
+            while self.is_truthy(self.evaluate(stmt.condition)):
+                self.execute(stmt.body)
+        except BreakException:
+            # DO NOTHING
+            pass
         return None
 
     def visit_block_stmt(self, stmt):
         self.execute_block(stmt.stmts, Environment(self.env))
         return None
+    
+    def visit_break_stmt(self, stmt):
+        raise BreakException(stmt.name)
     
     def visit_logical_expr(self, expr):
         left = self.evaluate(expr.left)
@@ -203,7 +215,8 @@ class Interpreter:
         return None
 
     def execute(self, stmt):
-        return stmt.accept(self)
+        if stmt is not None:
+            return stmt.accept(self)
 
     def execute_block(self, stmts, env):
         prev = self.env
@@ -246,6 +259,7 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.current = 0
+        self.loop_depth = 0
 
     def parse(self):
         try:
@@ -286,6 +300,8 @@ class Parser:
             return self.while_statement()
         if self.match(TokenKind.LEFT_BRACE):
             return BlockStmt(self.block())
+        if self.match(TokenKind.BREAK):
+            return self.break_statement()
         return self.expression_statement()
     
     def for_statement(self):
@@ -308,15 +324,19 @@ class Parser:
         if not self.check(TokenKind.RIGHT_PAREN):
             increment = self.expression()
         self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after for clauses')
-        body = self.statement()
-        if increment is not None:
-            body = BlockStmt([body, ExpressionStmt(increment)])
-        if condition is None:
-            condition = LiteralExpr(True)
-        body = WhileStmt(condition, body)
-        if initializer is not None:
-            body = BlockStmt([initializer, body])
-        return body
+        try:
+            self.loop_depth += 1
+            body = self.statement()
+            if increment is not None:
+                body = BlockStmt([body, ExpressionStmt(increment)])
+            if condition is None:
+                condition = LiteralExpr(True)
+            body = WhileStmt(condition, body)
+            if initializer is not None:
+                body = BlockStmt([initializer, body])
+            return body
+        finally:
+            self.loop_depth -= 1
     
     def if_statement(self):
         self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "if"')
@@ -337,8 +357,12 @@ class Parser:
         self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "while"')
         expr = self.expression()
         self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after "while"')
-        stmt = self.statement()
-        return WhileStmt(expr, stmt)
+        try:
+            self.loop_depth += 1
+            stmt = self.statement()
+            return WhileStmt(expr, stmt)
+        finally:
+            self.loop_depth -= 1
 
     def block(self):
         stmts = []
@@ -346,6 +370,13 @@ class Parser:
             stmts.append(self.declaration())
         self.consume(TokenKind.RIGHT_BRACE, 'Expect } after block')
         return stmts
+    
+    def break_statement(self):
+        if self.loop_depth == 0:
+            self.error(self.previous(), 'Must be inside a loop to use "break"')
+        name = self.previous()
+        self.consume(TokenKind.SEMICOLON, 'Expect ";" after "break"')
+        return BreakStmt(name)
 
     def expression_statement(self):
         value = self.expression()
@@ -528,6 +559,13 @@ class PrintStmt:
 
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
+
+class BreakStmt:
+    def __init__(self, name):
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_break_stmt(self)
     
 class LogicalExpr:
     def __init__(self, left, operator, right):
@@ -672,8 +710,9 @@ class TokenKind(Enum):
     TRUE = 35
     VAR = 36,
     WHILE = 37,
+    BREAK = 38
 
-    EOF = 38
+    EOF = 39
 
 class Token:
     def __init__(self, kind, lexeme, literal, line):
@@ -708,7 +747,8 @@ class Lexer:
             'this': TokenKind.THIS,
             'true': TokenKind.TRUE,
             'var': TokenKind.VAR,
-            'while': TokenKind.WHILE
+            'while': TokenKind.WHILE,
+            'break': TokenKind.BREAK
         }
 
     def tokenize(self):
