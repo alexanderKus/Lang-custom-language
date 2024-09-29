@@ -12,3 +12,15 @@ if (b != true) {
 } else {
   print "B is true"; 
 }
+
+if (b and a) {
+  print "A and B is true"; 
+} else {
+  print "A or B is false"; 
+}
+
+if (b or a) {
+  print "A or B is true"; 
+} else {
+  print "A and B is false"; 
+}

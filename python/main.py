@@ -19,7 +19,9 @@ from enum import Enum
 # block       -> "{" declaration* "}" ;
 # expression  -> assignment ;
 # assignment  -> IDENTIFIER "=" assignment
-#                | equality ;
+#                | logic_or ;
+# logic_or    -> logic_and ( "or" logic_and )* ;
+# logic and   -> equality ( "and" equality )* ;
 # equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
 # comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
 # term        -> factor ( ( "-" | "+" ) factor )* ;
@@ -104,6 +106,17 @@ class Interpreter:
     def visit_block_stmt(self, stmt):
         self.execute_block(stmt.stmts, Environment(self.env))
         return None
+    
+    def visit_logical_expr(self, expr):
+        left = self.evaluate(expr.left)
+        if expr.operator.kind == TokenKind.OR:
+            if self.is_truthy(left):
+                return left
+        else:
+            # LOGICAL AND
+            if not self.is_truthy(left):
+                return left
+        return self.evaluate(expr.right)
 
     def visit_variable_expr(self, expr):
         value = self.env.get(expr.name)
@@ -291,13 +304,29 @@ class Parser:
         return self.assignment()
     
     def assignment(self):
-        expr = self.equality()
+        expr = self.or_f()
         if self.match(TokenKind.EQUAL):
             equals = self.previous()
             value = self.assignment()
             if isinstance(expr, VariableExpr):
                 return AssignExpr(expr.name, value)
             self.error(equals, 'Invalid assignment target')
+        return expr
+    
+    def or_f(self):
+        expr = self.and_f()
+        while self.match(TokenKind.OR):
+            operator = self.previous()
+            right = self.and_f()
+            expr = LogicalExpr(expr, operator, right)
+        return expr
+    
+    def and_f(self):
+        expr = self.equality()
+        while self.match(TokenKind.AND):
+            operator = self.previous()
+            right = self.equality()
+            expr = LogicalExpr(expr, operator, right)
         return expr
 
     def equality(self):
@@ -439,6 +468,15 @@ class PrintStmt:
 
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
+    
+class LogicalExpr:
+    def __init__(self, left, operator, right):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+    def accept(self, visitor):
+        return visitor.visit_logical_expr(self)
 
 class AssignExpr:
     def __init__(self, name, value):
