@@ -10,10 +10,14 @@ from enum import Enum
 #                | statement ;
 # varDecl     -> "var" IDENTIFIER ( "=" expression )? ";" ;
 # statement   -> exprStmt
+#                | forStmt
 #                | ifStmt
 #                | printStmt 
 #                | whileStmt
 #                | block ;
+# forStmt     -> "for" "(" ( varDecl | exprStmt| ";" ) 
+#                  expression? ";" 
+#                  expression? ")" statement ;
 # exprStmt    -> expression ";" ;
 # ifStmt      -> "if" "(" expression ")" statement ( "else" statement )? ;
 # printStmt   -> "print" expression ";" ;
@@ -272,6 +276,8 @@ class Parser:
         return VarStmt(name, initializer)
 
     def statement(self):
+        if self.match(TokenKind.FOR):
+            return self.for_statement()
         if self.match(TokenKind.IF):
             return self.if_statement()
         if self.match(TokenKind.PRINT):
@@ -281,6 +287,34 @@ class Parser:
         if self.match(TokenKind.LEFT_BRACE):
             return BlockStmt(self.block())
         return self.expression_statement()
+    
+    def for_statement(self):
+        self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "for"')
+        initializer = None
+        if self.match(TokenKind.SEMICOLON):
+            # initializer = None
+            pass
+        elif self.match(TokenKind.VAR):
+            initializer = self.var_declaration()
+        else:
+            initializer = self.expression_statement()
+        condition = None
+        if not self.check(TokenKind.SEMICOLON):
+            condition = self.expression()
+        self.consume(TokenKind.SEMICOLON, 'Expect ";" after loop condition')
+        increment = None
+        if not self.check(TokenKind.RIGHT_PAREN):
+            increment = self.expression()
+        self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after for clauses')
+        body = self.statement()
+        if increment is not None:
+            body = BlockStmt([body, ExpressionStmt(increment)])
+        if condition is None:
+            condition = LiteralExpr(True)
+        body = WhileStmt(condition, body)
+        if initializer is not None:
+            body = BlockStmt([initializer, body])
+        return body
     
     def if_statement(self):
         self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "if"')
