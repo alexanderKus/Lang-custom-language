@@ -3,42 +3,6 @@
 import sys
 from enum import Enum
 
-# GRAMMA
-#
-# program     -> declaration* OEF ;
-# declaration -> varDecl
-#                | statement ;
-# varDecl     -> "var" IDENTIFIER ( "=" expression )? ";" ;
-# statement   -> exprStmt
-#                | forStmt
-#                | ifStmt
-#                | printStmt 
-#                | whileStmt
-#                | break
-#                | block ;
-# forStmt     -> "for" "(" ( varDecl | exprStmt| ";" ) 
-#                  expression? ";" 
-#                  expression? ")" statement ;
-# exprStmt    -> expression ";" ;
-# ifStmt      -> "if" "(" expression ")" statement ( "else" statement )? ;
-# printStmt   -> "print" expression ";" ;
-# whileStmt   -> "while" "(" expression ")" statement ;
-# block       -> "{" declaration* "}" ;
-# expression  -> assignment ;
-# assignment  -> IDENTIFIER "=" assignment
-#                | logic_or ;
-# logic_or    -> logic_and ( "or" logic_and )* ;
-# logic and   -> equality ( "and" equality )* ;
-# equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
-# comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
-# term        -> factor ( ( "-" | "+" ) factor )* ;
-# factor      -> unary ( ( "/" | "*" ) unary )* ;
-# unary       -> ( "!" | "-" ) unary
-#                | primary ;
-# primary     -> NUMBER | STRING | "true" | "false" | "nil"
-#                | "(" expression ")" ;
-#                | IDENTIFIER ;
-
 class RunTimeError(Exception):
     def __init__(self, token, message):
         super().__init__(message)
@@ -622,48 +586,6 @@ class VariableExpr:
 
     def accept(self, visitor):
         return visitor.visit_variable_expr(self)
-
-class AstPrinter:
-    def print(self, expr):
-        return expr.accept(self)
-
-    def visit_var_stmt(self, stmt):
-        pass
-
-    def visit_expression_stmt(self, stmt):
-        pass
-
-    def visit_print_stmt(self, stmt):
-        pass
-
-    def visit_assignment_expr(self, expr):
-        pass
-
-    def visit_binary_expr(self, expr):
-        return self.parenthesize(expr.operator.lexeme, expr.left, expr.right)
-
-    def visit_grouping_expr(self, expr):
-        return self.parenthesize('group', expr.expression)
-
-    def visit_literal_expr(self, expr):
-        if expr.value == 'nil':
-            return 'nil'
-        return str(expr.value)
-
-    def visit_unary_expr(self, expr):
-        return self.parenthesize(expr.operator.lexeme, expr.right)
-
-    def visit_variable_expr(self, expr):
-        pass
-    
-    def parenthesize(self, name, *exprs):
-        result = '('
-        result += name 
-        for expr in exprs:
-            result += ' ' 
-            result += expr.accept(self)
-        result += ')'
-        return result
 
 class TokenKind(Enum):
     # Single-character tokens.
