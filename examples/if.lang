@@ -1,6 +1,8 @@
 var a = true;
 var b = false;
 
+if (a) print "1"; else print "2";
+
 if (a) {
   print "A is true"; 
 } else {
