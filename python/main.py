@@ -186,7 +186,7 @@ class Interpreter:
         if expr.operator.kind == TokenKind.SLASH:
             self.check_number_operand(expr.operator, left, right)
             if float(right) == 0:
-                raise RunTimeError(expr.operator, 'Cannot devide by zero')
+                raise RunTimeError(expr.operator, 'Cannot divide by zero')
             return float(left) / float(right)
         if expr.operator.kind == TokenKind.STAR:
             self.check_number_operand(expr.operator, left, right)
