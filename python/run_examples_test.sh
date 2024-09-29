@@ -10,5 +10,6 @@ do
     echo -e "$entry \033[32mPASSED...\033[0m"
   else
     echo -e "$entry \033[31mFALIED...\033[0m"
+    exit 69
   fi
 done
