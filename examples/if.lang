@@ -1,0 +1,14 @@
+var a = true;
+var b = false;
+
+if (a) {
+  print "A is true"; 
+} else {
+  print "A is false"; 
+}
+
+if (b != true) {
+  print "B is false"; 
+} else {
+  print "B is true"; 
+}

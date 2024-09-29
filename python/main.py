@@ -10,9 +10,11 @@ from enum import Enum
 #                | statement ;
 # varDecl     -> "var" IDENTIFIER ( "=" expression )? ";" ;
 # statement   -> exprStmt
+#                | ifStmt
 #                | printStmt 
 #                | block ;
 # exprStmt    -> expression ";" ;
+# ifStmt      -> "if" "(" expression ")" statement ( "else" statement )? ;
 # printStmt   -> "print" expression ";" ;
 # block       -> "{" declaration* "}" ;
 # expression  -> assignment ;
@@ -77,6 +79,13 @@ class Interpreter:
         if isinstance(obj, str):
             return f'"{obj}"'
         return str(obj)
+
+    def visit_if_stmt(self, stmt):
+        if self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.then_branch)
+        else:
+            self.execute(stmt.else_branch)
+        return None
     
     def visit_var_stmt(self, stmt):
         value = None
@@ -243,11 +252,23 @@ class Parser:
         return VarStmt(name, initializer)
 
     def statement(self):
+        if self.match(TokenKind.IF):
+            return self.if_statement()
         if self.match(TokenKind.PRINT):
             return self.print_statement()
         if self.match(TokenKind.LEFT_BRACE):
             return BlockStmt(self.block())
         return self.expression_statement()
+    
+    def if_statement(self):
+        self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "if"')
+        condition = self.expression()
+        self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after if condition')
+        then_branch = self.statement()
+        else_branch = None
+        if (self.match(TokenKind.ELSE)):
+            else_branch = self.statement()
+        return IfStmt(condition, then_branch, else_branch)
 
     def print_statement(self):
         value = self.expression()
@@ -380,6 +401,15 @@ class Parser:
                                 TokenKind.PRINT, TokenKind.RETURN]:
                 return
             self.advance()
+
+class IfStmt:
+    def __init__(self, condition, then_branch, else_branch):
+        self.condition = condition
+        self.then_branch = then_branch
+        self.else_branch = else_branch
+
+    def accept(self, visitor):
+        return visitor.visit_if_stmt(self)
 
 class BlockStmt:
     def __init__(self, stmts):
