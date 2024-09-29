@@ -951,7 +951,7 @@ class ErrorHandler:
         
     @staticmethod
     def runtime_error(ex):
-        print(f'{ex}\n[Line {ex.token.line}]')
+        print(f'[RUNTIME ERROR][Line {ex.token.line}] {ex}')
 
 if __name__ == '__main__':
     lang = Lang()
