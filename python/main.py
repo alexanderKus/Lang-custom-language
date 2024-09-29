@@ -256,8 +256,9 @@ class ParseError(Exception):
     pass
 
 class Parser:
-    def __init__(self, tokens):
+    def __init__(self, tokens, eh):
         self.tokens = tokens
+        self.eh = eh
         self.current = 0
         self.loop_depth = 0
 
@@ -500,7 +501,7 @@ class Parser:
         return self.peek().kind == kind
     
     def error(self, token, message):
-        ErrorHandler.errorT(token, message)
+        self.eh.errorT(token, message)
         return ParseError()
 
     def synchronize(self):
@@ -725,8 +726,9 @@ class Token:
         return f'TOKEN: {self.kind} {self.lexeme} {self.literal}'
 
 class Lexer:
-    def __init__(self, source_code):
+    def __init__(self, source_code, eh):
         self.source_code = source_code
+        self.eh = eh
         self.start = 0
         self.current = 0
         self.line = 1
@@ -816,7 +818,7 @@ class Lexer:
         elif self.is_alpha(c):
             self.identifier()
         else:
-            ErrorHandler.error(self.line, 'Unexpected character.')
+            self.eh.error(self.line, 'Unexpected character.')
 
     def advance(self):
         self.current += 1
@@ -846,7 +848,7 @@ class Lexer:
                 self.line += 1
             self.advance()
         if self.is_at_end():
-            ErrorHandler.error(self.line, 'Unterminated string.')
+            self.eh.error(self.line, 'Unterminated string.')
             return
         self.advance()
         value = self.source_code[self.start+1:self.current-1]
@@ -887,6 +889,7 @@ class Lexer:
 class Lang:
     def __init__(self):
         self.interpreter = Interpreter()
+        self.eh = ErrorHandler(self)
         self.had_error = False
         self.had_runtime_error = False
 
@@ -899,18 +902,24 @@ class Lang:
 
     def run_file(self, source_file):
         source_code = ''
-        with open(source_file, 'r') as f:
-            source_code = f.read()
+        try:
+            with open(source_file, 'r') as f:
+                source_code = f.read()
+        except FileNotFoundError:
+            self.eh.error(0, f'cannot open {source_file}')
+            exit(68)
         self.run(source_code)
-        if self.had_error or self.had_runtime_error:
+        if self.had_error:
             exit(69)
+        if self.had_runtime_error:
+            exit(70)
 
     def run(self, source_code):
         if source_code == 'exit()':
             exit(0)
-        lexer = Lexer(source_code)
+        lexer = Lexer(source_code, self.eh)
         tokens = lexer.tokenize()
-        parser = Parser(tokens)
+        parser = Parser(tokens, self.eh)
         stmts = parser.parse()
         if self.had_error:
             return
@@ -921,39 +930,32 @@ class Lang:
             for v in [g for g in gen if g is not None]:
                 print(v)
         except RunTimeError as e:
-            self.runtime_error(e)
+            self.eh.runtime_error(e)
+
+class ErrorHandler:
+    def __init__(self, lang):
+        self.lang = lang
 
     def error(self, line_number, message):
         self.report(line_number, '', message)
 
-    def report(self, line, where, message):
-        ErrorHandler.report(line, where, message)
-        self.had_error = True
-
-    def runtime_error(self, ex):
-        ErrorHandler.runtime_error(ex)
-        self.had_runtime_error = True
-
-class ErrorHandler:
-    @staticmethod
-    def error(line_number, message):
-        ErrorHandler.report(line_number, '', message)
-
-    @staticmethod
-    def errorT(token, message):
+    def errorT(self, token, message):
         if token.kind == TokenKind.EOF:
-            ErrorHandler.report(token.line, 'at end', message)
+            self.report(token.line, 'at end', message)
         else:
-            ErrorHandler.report(token.line, f'at "{token.lexeme}"', message)
+            self.report(token.line, f'at "{token.lexeme}"', message)
 
-    @staticmethod
-    def report(line, where, message):
+    def report(self, line, where, message):
+        self.lang.had_error = True
         # TODO: come up with better error handling
-        print(f'[Line {line}] ERROR: {where} {message}')
+        if line == 0 and where == '':
+            print(f'ERROR: {message}')
+        else:
+            print(f'[Line {line}] ERROR: {where} {message}')
         
-    @staticmethod
-    def runtime_error(ex):
-        print(f'[RUNTIME ERROR][Line {ex.token.line}] {ex}')
+    def runtime_error(self, ex):
+        self.lang.had_runtime_error = True
+        print(f'[Line {ex.token.line}] {ex}')
 
 if __name__ == '__main__':
     lang = Lang()
