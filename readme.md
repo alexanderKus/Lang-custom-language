@@ -40,7 +40,7 @@ assignment  -> IDENTIFIER "=" assignment
 logic_or    -> logic_and ( "or" logic_and )* ;
 logic and   -> equality ( "and" equality )* ;
 equality    -> comparison ( ( "!=" | "==" ) comparison )* ;
-comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term _* ;
+comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term )* ;
 term        -> factor ( ( "-" | "+" ) factor )* ;
 factor      -> unary ( ( "/" | "*" ) unary )* ;
 unary       -> ( "!" | "-" ) unary
