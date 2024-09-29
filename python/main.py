@@ -901,9 +901,9 @@ class Lang:
         source_code = ''
         with open(source_file, 'r') as f:
             source_code = f.read()
+        self.run(source_code)
         if self.had_error or self.had_runtime_error:
             exit(69)
-        self.run(source_code)
 
     def run(self, source_code):
         if source_code == 'exit()':
@@ -914,6 +914,8 @@ class Lang:
         stmts = parser.parse()
         if self.had_error:
             return
+        # NOTE: sometimes stmts may contains None values,
+        # skipping them may be a good idea, to run interpreter on valid statements
         try:
             gen = self.interpreter.interpret(stmts)
             for v in [g for g in gen if g is not None]:
