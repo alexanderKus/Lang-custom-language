@@ -8,6 +8,10 @@ class RunTimeError(Exception):
         super().__init__(message)
         self.token = token
 
+class Return(Exception):
+    def __init__(self, value):
+        self.value = value
+
 class BreakException(RunTimeError):
     def __init__(self, token, message='Must be inside a loop to use "break"'):
         super().__init__(token, message)
@@ -86,6 +90,12 @@ class Interpreter:
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
         print(self.stringify(value))
+    
+    def visit_return_stmt(self, stmt):
+        value = None
+        if stmt is not None:
+            value = self.evaluate(stmt.value)
+        raise Return(value)
 
     def visit_while_stmt(self, stmt):
         try:
@@ -297,6 +307,8 @@ class Parser:
             return self.if_statement()
         if self.match(TokenKind.PRINT):
             return self.print_statement()
+        if self.match(TokenKind.RETURN):
+            return self.return_statement()
         if self.match(TokenKind.WHILE):
             return self.while_statement()
         if self.match(TokenKind.LEFT_BRACE):
@@ -353,6 +365,14 @@ class Parser:
         value = self.expression()
         self.consume(TokenKind.SEMICOLON, 'Expect ";" after value')
         return PrintStmt(value)
+    
+    def return_statement(self):
+        keyword = self.previous()
+        value = None
+        if not self.check(TokenKind.SEMICOLON):
+            value = self.expression()
+        self.consume(TokenKind.SEMICOLON, 'Expect ";" after return value')
+        return ReturnStmt(keyword, value)
     
     def while_statement(self):
         self.consume(TokenKind.LEFT_PAREN, 'Expect "(" after "while"')
@@ -564,7 +584,10 @@ class LangFunction(LangCallable):
         env = Environment(interpreter.globals)
         for i in range(len(self.declaration.params)):
             env.define(self.declaration.params[i].lexeme, arguments[i])
-        interpreter.execute_block(self.declaration.body, env)
+        try:
+            interpreter.execute_block(self.declaration.body, env)
+        except Return as r:
+            return r.value
         return None
 
     def arity(self):
@@ -578,6 +601,14 @@ class FunctionStmt:
 
     def accept(self, visitor):
         return visitor.visit_function_stmt(self)
+
+class ReturnStmt:
+    def __init__(self, keyword, value):
+        self.keyword = keyword
+        self.value = value
+
+    def accept(self, visitor):
+        return visitor.visit_return_stmt(self)
 
 class WhileStmt:
     def __init__(self, condition, body):
