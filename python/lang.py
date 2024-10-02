@@ -66,7 +66,7 @@ class Interpreter:
         return str(obj)
     
     def visit_function_stmt(self, stmt):
-        func = LangFunction(stmt)
+        func = LangFunction(stmt, self.env)
         self.env.define(stmt.name.lexeme, func)
         return None
 
@@ -574,14 +574,15 @@ class Clock(LangCallable):
         return 0
 
 class LangFunction(LangCallable):
-    def __init__(self, declaration):
+    def __init__(self, declaration, closure):
         self.declaration = declaration
+        self.closure = closure
     
     def __str__(self):
         return f'<fn {self.declaration.name.lexeme}>'
 
     def call(self, interpreter, arguments):
-        env = Environment(interpreter.globals)
+        env = Environment(self.closure)
         for i in range(len(self.declaration.params)):
             env.define(self.declaration.params[i].lexeme, arguments[i])
         try:
