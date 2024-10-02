@@ -38,7 +38,11 @@ class Environment:
 
 class Interpreter:
     def __init__(self):
-        self.env = Environment()
+        self.globals = Environment()
+        self.env = self.globals
+        # NOTE: Clock in a native function
+        # TODO: Add function to interact with file, I\O etc.
+        self.globals.define('clock', Clock())
 
     def interpret(self, stmts):
         if stmts is None:
@@ -104,6 +108,15 @@ class Interpreter:
             if not self.is_truthy(left):
                 return left
         return self.evaluate(expr.right)
+    
+    def visit_call_expr(self, expr):
+        callee = self.evaluate(expr.callee)
+        args = [self.evaluate(arg) for arg in expr.arguments]
+        if not isinstance(callee, LangCallable):
+            raise RuntimeError(expr.paren, 'Can only call functions and classes')
+        if len(args) != callee.arity():
+            raise RuntimeError(expr.paren, f'Expected {callee.arity()} arguments but got {len(args)}')
+        return callee.call(self, args)
 
     def visit_variable_expr(self, expr):
         value = self.env.get(expr.name)
@@ -414,7 +427,27 @@ class Parser:
             operator = self.previous()
             right = self.unary()
             return UnaryExpr(operator, right)
-        return self.primary()
+        return self.call()
+    
+    def call(self):
+        expr = self.primary()
+        while True:
+            if self.match(TokenKind.LEFT_PAREN):
+                expr = self.finish_call(expr)
+            else:
+                break
+        return expr
+    
+    def finish_call(self, callee):
+        args = []
+        if not self.check(TokenKind.RIGHT_PAREN):
+            args.append(self.expression())
+            while self.match(TokenKind.COMMA):
+                if len(args) >= 255:
+                    self.eh.error(self.peek(), 'Cannot have more then 255 arguments')
+                args.append(self.expression())
+        paren = self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after arguments')
+        return CallExpr(callee, paren, args)
 
     def primary(self):
         if self.match(TokenKind.FALSE):
@@ -479,6 +512,24 @@ class Parser:
                 return
             self.advance()
 
+class LangCallable:
+    def call(self, interpreter, arguments):
+        pass
+
+    def arity(self):
+        pass
+
+class Clock(LangCallable):
+    def __str__(self):
+        return '<native function>'
+
+    def call(self, interpreter, arguments):
+        import time
+        return time.time()
+
+    def arity(self):
+        return 0
+
 class WhileStmt:
     def __init__(self, condition, body):
         self.condition = condition
@@ -531,6 +582,15 @@ class BreakStmt:
 
     def accept(self, visitor):
         return visitor.visit_break_stmt(self)
+
+class CallExpr:
+    def __init__(self, callee, token, arguments):
+        self.callee = callee
+        self.token = token
+        self.arguments = arguments
+
+    def accept(self, visitor):
+        return visitor.visit_call_expr(self)
     
 class LogicalExpr:
     def __init__(self, left, operator, right):

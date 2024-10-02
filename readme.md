@@ -9,8 +9,8 @@
 
 ### USAGE
 
-- To run REPL: `./lang`
-- To from file: `./lang <file>`
+- To run REPL: `./lang.py`
+- To from file: `./lang.py <file>`
 
 ### GRAMMAR
 
@@ -44,10 +44,12 @@ comparison  -> term ( ( ">" | ">=" | ">" | ">=" ) term )* ;
 term        -> factor ( ( "-" | "+" ) factor )* ;
 factor      -> unary ( ( "/" | "*" ) unary )* ;
 unary       -> ( "!" | "-" ) unary
-               | primary ;
+               | call ;
+call        -> primary ( "(" arguments? ")" )
 primary     -> NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
                | IDENTIFIER ;
+arguments   -> expression ( "," expression )* ;
 ```
 
 ### EXAMPLES
