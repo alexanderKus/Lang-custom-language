@@ -66,9 +66,13 @@ class Interpreter:
         return str(obj)
     
     def visit_function_stmt(self, stmt):
-        func = LangFunction(stmt, self.env)
-        self.env.define(stmt.name.lexeme, func)
+        name = stmt.name.lexeme
+        func = LangFunction(name, stmt.function, self.env)
+        self.env.define(name, func)
         return None
+    
+    def visit_function_expr(self, expr):
+        return LangFunction('', expr, self.env)
 
     def visit_if_stmt(self, stmt):
         if self.is_truthy(self.evaluate(stmt.condition)):
@@ -267,7 +271,8 @@ class Parser:
     
     def declaration(self):
         try:
-            if self.match(TokenKind.FUN):
+            if self.check(TokenKind.FUN) and self.check_next(TokenKind.IDENTIFIER):
+                self.consume(TokenKind.FUN, '')
                 return self.function('function');
             if self.match(TokenKind.VAR):
                 return self.var_declaration()
@@ -278,19 +283,22 @@ class Parser:
     
     def function(self, kind):
         name = self.consume(TokenKind.IDENTIFIER, f'Expect {kind} name')
+        return FunctionStmt(name, self.function_body(kind))
+
+    def function_body(self, kind):
         self.consume(TokenKind.LEFT_PAREN, f'Expect "(" after {kind} name')
         params = []
         if not self.check(TokenKind.RIGHT_PAREN):
             while True:
-                if len(params) >= 255:
-                    self.error(self.peek(), 'Cannot have more than 255 parameters')
+                if len(params) >= 8:
+                    self.error(self.peek(), 'Cannot have more than 8 parameters')
                 params.append(self.consume(TokenKind.IDENTIFIER, 'Expect parameter name')) 
                 if not self.match(TokenKind.COMMA):
                     break
         self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after parameters')
         self.consume(TokenKind.LEFT_BRACE, 'Expect "{" before ' + kind + ' body')
         body = self.block()
-        return FunctionStmt(name, params, body)
+        return FunctionExpr(params, body)
     
     def var_declaration(self):
         name = self.consume(TokenKind.IDENTIFIER, 'Expect variable name')
@@ -493,6 +501,8 @@ class Parser:
         return CallExpr(callee, paren, args)
 
     def primary(self):
+        if self.match(TokenKind.FUN):
+            return self.function_body('function')
         if self.match(TokenKind.FALSE):
             return LiteralExpr(False)
         if self.match(TokenKind.TRUE):
@@ -540,6 +550,11 @@ class Parser:
             return False
         return self.peek().kind == kind
     
+    def check_next(self, kind):
+        if self.is_at_end() or (self.tokens[self.current+1] == TokenKind.EOF):
+            return False
+        return self.tokens[self.current+1].kind == kind
+    
     def error(self, token, message):
         self.eh.errorT(token, message)
         return ParseError()
@@ -574,12 +589,15 @@ class Clock(LangCallable):
         return 0
 
 class LangFunction(LangCallable):
-    def __init__(self, declaration, closure):
+    def __init__(self, name, declaration, closure):
+        self.name = name
         self.declaration = declaration
         self.closure = closure
     
     def __str__(self):
-        return f'<fn {self.declaration.name.lexeme}>'
+        if self.name is None:
+            return '<fn>'
+        return f'<fn {self.name}>'
 
     def call(self, interpreter, arguments):
         env = Environment(self.closure)
@@ -595,13 +613,20 @@ class LangFunction(LangCallable):
         return len(self.declaration.params)
 
 class FunctionStmt:
-    def __init__(self, name, params, body):
+    def __init__(self, name, function):
         self.name = name
+        self.function = function
+
+    def accept(self, visitor):
+        return visitor.visit_function_stmt(self)
+
+class FunctionExpr:
+    def __init__(self, params, body):
         self.params = params
         self.body = body
 
     def accept(self, visitor):
-        return visitor.visit_function_stmt(self)
+        return visitor.visit_function_expr(self)
 
 class ReturnStmt:
     def __init__(self, keyword, value):
