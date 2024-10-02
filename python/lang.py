@@ -60,6 +60,11 @@ class Interpreter:
         if isinstance(obj, str):
             return f'"{obj}"'
         return str(obj)
+    
+    def visit_function_stmt(self, stmt):
+        func = LangFunction(stmt)
+        self.env.define(stmt.name.lexeme, func)
+        return None
 
     def visit_if_stmt(self, stmt):
         if self.is_truthy(self.evaluate(stmt.condition)):
@@ -252,12 +257,30 @@ class Parser:
     
     def declaration(self):
         try:
+            if self.match(TokenKind.FUN):
+                return self.function('function');
             if self.match(TokenKind.VAR):
                 return self.var_declaration()
             return self.statement()
         except ParseError:
             self.synchronize()
         return None
+    
+    def function(self, kind):
+        name = self.consume(TokenKind.IDENTIFIER, f'Expect {kind} name')
+        self.consume(TokenKind.LEFT_PAREN, f'Expect "(" after {kind} name')
+        params = []
+        if not self.check(TokenKind.RIGHT_PAREN):
+            while True:
+                if len(params) >= 255:
+                    self.error(self.peek(), 'Cannot have more than 255 parameters')
+                params.append(self.consume(TokenKind.IDENTIFIER, 'Expect parameter name')) 
+                if not self.match(TokenKind.COMMA):
+                    break
+        self.consume(TokenKind.RIGHT_PAREN, 'Expect ")" after parameters')
+        self.consume(TokenKind.LEFT_BRACE, 'Expect "{" before ' + kind + ' body')
+        body = self.block()
+        return FunctionStmt(name, params, body)
     
     def var_declaration(self):
         name = self.consume(TokenKind.IDENTIFIER, 'Expect variable name')
@@ -529,6 +552,32 @@ class Clock(LangCallable):
 
     def arity(self):
         return 0
+
+class LangFunction(LangCallable):
+    def __init__(self, declaration):
+        self.declaration = declaration
+    
+    def __str__(self):
+        return f'<fn {self.declaration.name.lexeme}>'
+
+    def call(self, interpreter, arguments):
+        env = Environment(interpreter.globals)
+        for i in range(len(self.declaration.params)):
+            env.define(self.declaration.params[i].lexeme, arguments[i])
+        interpreter.execute_block(self.declaration.body, env)
+        return None
+
+    def arity(self):
+        return len(self.declaration.params)
+
+class FunctionStmt:
+    def __init__(self, name, params, body):
+        self.name = name
+        self.params = params
+        self.body = body
+
+    def accept(self, visitor):
+        return visitor.visit_function_stmt(self)
 
 class WhileStmt:
     def __init__(self, condition, body):
