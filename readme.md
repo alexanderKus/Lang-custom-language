@@ -20,7 +20,7 @@ declaration  -> funDecl
                 | varDecl
                 | statement ;
 funDecl      -> "fun" function ;
-function     -> IDENTIFIER? functionBody;
+function     -> IDENTIFIER functionBody;
 functionBody -> "(" parameters? ")" block ;
 parameters   -> IDENTIFIER ( "," IDENTIFIER )* ;
 varDecl      -> "var" IDENTIFIER ( "=" expression )? ";" ;
