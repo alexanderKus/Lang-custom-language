@@ -1,0 +1,63 @@
+from tokens import TokenKind
+
+class RunTimeError(Exception):
+    def __init__(self, token, message):
+        super().__init__(message)
+        self.token = token
+
+class Return(Exception):
+    def __init__(self, value):
+        self.value = value
+
+class BreakException(RunTimeError):
+    def __init__(self, token, message='Must be inside a loop to use "break"'):
+        super().__init__(token, message)
+
+class ErrorHandler:
+    def __init__(self, lang):
+        self.lang = lang
+
+    def error(self, line_number, message):
+        self.report(line_number, '', message)
+
+    def errorT(self, token, message):
+        if token.kind == TokenKind.EOF:
+            self.report(token.line, 'at end', message)
+        else:
+            self.report(token.line, f'at "{token.lexeme}"', message)
+
+    def report(self, line, where, message):
+        self.lang.had_error = True
+        # TODO: come up with better error handling
+        if line == 0 and where == '':
+            print(f'ERROR: {message}')
+        else:
+            print(f'[Line {line}] ERROR: {where} {message}')
+        
+    def runtime_error(self, ex):
+        self.lang.had_runtime_error = True
+        print(f'[Line {ex.token.line}] {ex}')
+
+class Environment:
+    def __init__(self, enclosing = None):
+        self.enclosing = enclosing
+        self.values = {}
+    
+    def define(self, name, value):
+        self.values[name] = value
+
+    def get(self, token):
+        if token.lexeme in self.values:
+            return self.values.get(token.lexeme)
+        if self.enclosing is not None:
+            return self.enclosing.get(token)
+        raise RunTimeError(token, f'Undefined variable {token.lexeme}')
+
+    def assign(self, token, value):
+        if token.lexeme in self.values:
+            self.values[token.lexeme] = value
+            return
+        if self.enclosing is not None:
+            self.enclosing.assign(token, value)
+            return
+        raise RunTimeError(token, f'Undefined variable "{token.lexeme}"')
