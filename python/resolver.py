@@ -1,4 +1,7 @@
-class Resolver:
+from common import Visitor
+
+
+class Resolver(Visitor):
     def __init__(self, interpreter):
         self.interpreter = interpreter
     

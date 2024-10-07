@@ -1,11 +1,11 @@
 
 from tokens import TokenKind
-from common import RunTimeError, Return, BreakException, Environment
+from common import RunTimeError, Return, BreakException, Environment, Visitor
 from expr import *
 from stmt import *
 from function import *
 
-class Interpreter:
+class Interpreter(Visitor):
     def __init__(self):
         self.globals = Environment()
         self.env = self.globals
