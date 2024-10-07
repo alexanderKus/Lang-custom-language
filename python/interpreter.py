@@ -108,7 +108,7 @@ class Interpreter(Visitor):
             return value
         raise RunTimeError(expr.name, 'Accessing uninitialized variable')
 
-    def visit_assignment_expr(self, expr):
+    def visit_assign_expr(self, expr):
         value = self.evaluate(expr.value)
         self.env.assign(expr.name, value)
         return value

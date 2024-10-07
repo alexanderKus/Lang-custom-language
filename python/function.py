@@ -41,19 +41,3 @@ class LangFunction(LangCallable):
 
     def arity(self):
         return len(self.declaration.params)
-
-class FunctionStmt:
-    def __init__(self, name, function):
-        self.name = name
-        self.function = function
-
-    def accept(self, visitor):
-        return visitor.visit_function_stmt(self)
-
-class FunctionExpr:
-    def __init__(self, params, body):
-        self.params = params
-        self.body = body
-
-    def accept(self, visitor):
-        return visitor.visit_function_expr(self)

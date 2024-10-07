@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 
 import sys
+import os
 from common import ErrorHandler, RunTimeError
 from lexer import Lexer
 from parser import Parser
 from interpreter import Interpreter
+from astprinter import AstPrinter
 
+PRINT_AST = int(os.getenv('PRINTAST') or 0)
 
 class Lang:
     def __init__(self):
@@ -44,6 +47,10 @@ class Lang:
         stmts = parser.parse()
         if self.had_error:
             return
+        if PRINT_AST == 1:
+            ast_printer = AstPrinter()
+            for s in stmts:
+                print(ast_printer.printStmt(s))
         # NOTE: sometimes stmts may contains None values,
         # skipping them may be a good idea, to run interpreter on valid statements
         try:

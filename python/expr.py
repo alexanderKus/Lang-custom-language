@@ -1,4 +1,16 @@
-class CallExpr:
+class Expr:
+    def accept(self, visitor):
+        pass
+
+class FunctionExpr(Expr):
+    def __init__(self, params, body):
+        self.params = params
+        self.body = body
+
+    def accept(self, visitor):
+        return visitor.visit_function_expr(self)
+
+class CallExpr(Expr):
     def __init__(self, callee, token, arguments):
         self.callee = callee
         self.token = token
@@ -7,7 +19,7 @@ class CallExpr:
     def accept(self, visitor):
         return visitor.visit_call_expr(self)
     
-class LogicalExpr:
+class LogicalExpr(Expr):
     def __init__(self, left, operator, right):
         self.left = left
         self.operator = operator
@@ -16,15 +28,15 @@ class LogicalExpr:
     def accept(self, visitor):
         return visitor.visit_logical_expr(self)
 
-class AssignExpr:
+class AssignExpr(Expr):
     def __init__(self, name, value):
         self.name = name
         self.value = value
         
     def accept(self, visitor):
-        return visitor.visit_assignment_expr(self)
+        return visitor.visit_assign_expr(self)
 
-class BinaryExpr:
+class BinaryExpr(Expr):
     def __init__(self, left, operator, right):
         self.left = left
         self.operator = operator
@@ -33,21 +45,21 @@ class BinaryExpr:
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
 
-class GroupingExpr:
+class GroupingExpr(Expr):
     def __init__(self, expression):
         self.expression = expression
 
     def accept(self, visitor):
         return visitor.visit_grouping_expr(self)
 
-class LiteralExpr:
+class LiteralExpr(Expr):
     def __init__(self, value):
         self.value = value
 
     def accept(self, visitor):
         return visitor.visit_literal_expr(self)
 
-class UnaryExpr:
+class UnaryExpr(Expr):
     def __init__(self, operator, right):
         self.operator = operator
         self.right = right
@@ -55,7 +67,7 @@ class UnaryExpr:
     def accept(self, visitor):
         return visitor.visit_unary_expr(self)
 
-class VariableExpr:
+class VariableExpr(Expr):
     def __init__(self, name):
         self.name = name
 

@@ -1,4 +1,16 @@
-class ReturnStmt:
+class Stmt:
+    def accept(self, visitor):
+        pass
+
+class FunctionStmt(Stmt):
+    def __init__(self, name, function):
+        self.name = name
+        self.function = function
+
+    def accept(self, visitor):
+        return visitor.visit_function_stmt(self)
+
+class ReturnStmt(Stmt):
     def __init__(self, keyword, value):
         self.keyword = keyword
         self.value = value
@@ -6,7 +18,7 @@ class ReturnStmt:
     def accept(self, visitor):
         return visitor.visit_return_stmt(self)
 
-class WhileStmt:
+class WhileStmt(Stmt):
     def __init__(self, condition, body):
         self.condition = condition
         self.body = body
@@ -14,7 +26,7 @@ class WhileStmt:
     def accept(self, visitor):
         return visitor.visit_while_stmt(self)
 
-class IfStmt:
+class IfStmt(Stmt):
     def __init__(self, condition, then_branch, else_branch):
         self.condition = condition
         self.then_branch = then_branch
@@ -23,14 +35,14 @@ class IfStmt:
     def accept(self, visitor):
         return visitor.visit_if_stmt(self)
 
-class BlockStmt:
+class BlockStmt(Stmt):
     def __init__(self, stmts):
         self.stmts = stmts
 
     def accept(self, visitor):
         return visitor.visit_block_stmt(self)
 
-class VarStmt:
+class VarStmt(Stmt):
     def __init__(self, name, initializer):
         self.name = name
         self.initializer = initializer
@@ -38,21 +50,21 @@ class VarStmt:
     def accept(self, visitor):
         return visitor.visit_var_stmt(self)
 
-class ExpressionStmt:
+class ExpressionStmt(Stmt):
     def __init__(self, expr):
         self.expr = expr
 
     def accept(self, visitor):
         return visitor.visit_expression_stmt(self)
 
-class PrintStmt:
+class PrintStmt(Stmt):
     def __init__(self, expr):
         self.expr = expr
 
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
 
-class BreakStmt:
+class BreakStmt(Stmt):
     def __init__(self, name):
         self.name = name
 
