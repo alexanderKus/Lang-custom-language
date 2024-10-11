@@ -34,7 +34,6 @@ class Interpreter(Visitor):
         name = stmt.name.lexeme
         func = LangFunction(name, stmt.function, self.env)
         self.env.define(name, func)
-        return None
     
     def visit_function_expr(self, expr):
         return LangFunction('', expr, self.env)
@@ -44,14 +43,12 @@ class Interpreter(Visitor):
             self.execute(stmt.then_branch)
         else:
             self.execute(stmt.else_branch)
-        return None
     
     def visit_var_stmt(self, stmt):
         value = None
         if stmt.initializer is not None:
             value = self.evaluate(stmt.initializer)
         self.env.define(stmt.name.lexeme, value)
-        return None
 
     def visit_expression_stmt(self, stmt):
         return self.evaluate(stmt.expr)
@@ -73,11 +70,9 @@ class Interpreter(Visitor):
         except BreakException:
             # DO NOTHING
             pass
-        return None
 
     def visit_block_stmt(self, stmt):
         self.execute_block(stmt.stmts, Environment(self.env))
-        return None
     
     def visit_break_stmt(self, stmt):
         raise BreakException(stmt.name)

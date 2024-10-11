@@ -37,7 +37,6 @@ class LangFunction(LangCallable):
             interpreter.execute_block(self.declaration.body, env)
         except Return as r:
             return r.value
-        return None
 
     def arity(self):
         return len(self.declaration.params)
