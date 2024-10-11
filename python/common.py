@@ -62,6 +62,7 @@ class Environment:
             return
         raise RunTimeError(token, f'Undefined variable "{token.lexeme}"')
 
+# TODO: instead of pass raise NotImplemented exception
 class Visitor:
     # Statements
     def visit_function_stmt(self, stmt):
