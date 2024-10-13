@@ -5,10 +5,19 @@ class FunctionType(Enum):
     NONE = 1,
     FUNCTION = 2
 
+class VariableState(Enum):
+    DECLARED = 0,
+    DEFINED = 1,
+    READ = 3
+
+class Variable:
+    def __init__(self, name, state):
+        self.name = name
+        self.state = state
+
 class Resolver(Visitor):
     # NOTE: If more static analysis is need, add them here
     # Example 1: add warning about unreachable code after return statement
-    # Example 2: add warning about unused variable
     def __init__(self, interpreter, eh):
         self.interpreter = interpreter
         self.eh = eh
@@ -28,7 +37,11 @@ class Resolver(Visitor):
         self.scopes.append({})
 
     def end_scope(self):
-        self.scopes.pop()
+        scope = self.scopes.pop()
+        for entry in scope.values():
+            if entry.state == VariableState.DEFINED:
+                # self.eh.errorT(entry.name, 'Local variable is not used')
+                self.eh.warningT(entry.name, 'local variable is not used')
 
     def visit_function_stmt(self, stmt):
         self.declare(stmt.name)
@@ -80,11 +93,11 @@ class Resolver(Visitor):
             if name.lexeme in self.scopes[-1]:
                 self.eh.errorT(name, 'Already variable with this name in this scope')
             # Add variable to innermost scope
-            self.scopes[-1][name.lexeme] = False
+            self.scopes[-1][name.lexeme] = Variable(name, VariableState.DECLARED)
     
     def define(self, name):
         if len(self.scopes) > 0:
-            self.scopes[-1][name.lexeme] = True
+            self.scopes[-1][name.lexeme] = Variable(name, VariableState.DEFINED)
     
     def resolve_function(self, function, type):
         enclosing_function = self.current_function
@@ -112,13 +125,13 @@ class Resolver(Visitor):
 
     def visit_variable_expr(self, expr):
         if len(self.scopes) > 0 and expr.name.lexeme in self.scopes[-1]:
-            if self.scopes[-1][expr.name.lexeme] == False:
+            if self.scopes[-1][expr.name.lexeme].state == VariableState.DECLARED:
                 self.eh.errorT(expr.name, 'Cannot read local variable in its own initializer')
-        self.resolve_local(expr, expr.name)
+        self.resolve_local(expr, expr.name, True)
 
     def visit_assign_expr(self, expr):
         self._resolve(expr.value)
-        self.resolve_local(expr, expr.name)
+        self.resolve_local(expr, expr.name, False)
 
     def visit_binary_expr(self, expr):
         self._resolve(expr.left)
@@ -133,9 +146,11 @@ class Resolver(Visitor):
     def visit_unary_expr(self, expr):
         self._resolve(expr.right)
 
-    def resolve_local(self, expr, name):
+    def resolve_local(self, expr, name, is_read):
         for i in range(len(self.scopes)):
             index = len(self.scopes) - 1 - i
             if self.scopes[i].get(name.lexeme) is not None:
                 self.interpreter.resolve(expr, index)
+                if is_read: 
+                    self.scopes[i].get(name.lexeme).state = VariableState.READ
                 return
