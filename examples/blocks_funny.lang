@@ -1,6 +1,6 @@
+// This is invalid. Cannot overshadow variable with value of variable which is overshadowing.
 var a = 1;
 {
   var a = a + 2;
   print a;
-  // will print 3
 }
