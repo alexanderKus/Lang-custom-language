@@ -6,6 +6,7 @@ from common import ErrorHandler, RunTimeError
 from lexer import Lexer
 from parser import Parser
 from interpreter import Interpreter
+from resolver import Resolver
 from astprinter import AstPrinter
 
 PRINT_AST = int(os.getenv('PRINTAST') or 0)
@@ -39,18 +40,18 @@ class Lang:
             exit(70)
 
     def run(self, source_code):
-        if source_code == 'exit()':
-            exit(0)
+        if source_code == 'exit()': exit(0)
         lexer = Lexer(source_code, self.eh)
         tokens = lexer.tokenize()
         parser = Parser(tokens, self.eh)
         stmts = parser.parse()
-        if self.had_error:
-            return
         if PRINT_AST == 1:
             ast_printer = AstPrinter()
-            for s in stmts:
-                print(ast_printer.printStmt(s))
+            for s in stmts: print(ast_printer.printStmt(s))
+        if self.had_error: return
+        resolver = Resolver(self.interpreter, self.eh)
+        resolver.resolve(stmts)
+        if self.had_error: return
         # NOTE: sometimes stmts may contains None values,
         # skipping them may be a good idea, to run interpreter on valid statements
         try:

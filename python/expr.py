@@ -1,4 +1,12 @@
 class Expr:
+    def __hash__(self):
+        return hash(str(self))
+    
+    def __eq__(self, other):
+        if isinstance(other, Expr):
+            return self.__hash__() == other.__hash__()
+        return False
+
     def accept(self, visitor):
         pass
 

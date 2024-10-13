@@ -9,6 +9,7 @@ class Interpreter(Visitor):
     def __init__(self):
         self.globals = Environment()
         self.env = self.globals
+        self.locals = {}
         # NOTE: Clock in a native function
         # TODO: Add function to interact with file, I\O etc.
         self.globals.define('clock', Clock())
@@ -18,6 +19,9 @@ class Interpreter(Visitor):
             return
         for stmt in [s for s in stmts if s is not None]:
             yield self.execute(stmt)
+    
+    def resolve(self, expr, depth):
+        self.locals[expr] = depth
 
     def stringify(self, obj):
         if obj is None:
@@ -98,14 +102,15 @@ class Interpreter(Visitor):
         return callee.call(self, args)
 
     def visit_variable_expr(self, expr):
-        value = self.env.get(expr.name)
-        if value is not None:
-            return value
-        raise RunTimeError(expr.name, 'Accessing uninitialized variable')
+        return self.look_up_variable(expr.name, expr)
 
     def visit_assign_expr(self, expr):
         value = self.evaluate(expr.value)
-        self.env.assign(expr.name, value)
+        if expr in self.locals:
+            distance = self.locals[expr]
+            self.env.assign_at(distance, expr.name, value)
+        else:
+            self.globals.assign(expr.name, value)
         return value
 
     def visit_binary_expr(self, expr):
@@ -169,6 +174,13 @@ class Interpreter(Visitor):
             return -float(right)
         # Unreachable
         return None
+
+    def look_up_variable(self, name, expr):
+        if expr in self.locals:
+            distance = self.locals[expr]
+            return self.env.get_at(distance, name.lexeme)
+        else:
+            return self.globals.get(name)
 
     def execute(self, stmt):
         if stmt is not None:

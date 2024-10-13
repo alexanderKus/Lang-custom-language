@@ -52,6 +52,9 @@ class Environment:
         if self.enclosing is not None:
             return self.enclosing.get(token)
         raise RunTimeError(token, f'Undefined variable {token.lexeme}')
+    
+    def get_at(self, distance, name):
+        return self.ancestor(distance).values[name]
 
     def assign(self, token, value):
         if token.lexeme in self.values:
@@ -61,6 +64,16 @@ class Environment:
             self.enclosing.assign(token, value)
             return
         raise RunTimeError(token, f'Undefined variable "{token.lexeme}"')
+    
+    def assign_at(self, distance, name, value):
+        self.ancestor(distance).values[name.lexeme] = value
+
+    def ancestor(self, distance):
+        env = self
+        for i in range(distance):
+            env = env.enclosing
+        return env
+
 
 # TODO: instead of pass raise NotImplemented exception
 class Visitor:
