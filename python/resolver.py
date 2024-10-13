@@ -147,10 +147,11 @@ class Resolver(Visitor):
         self._resolve(expr.right)
 
     def resolve_local(self, expr, name, is_read):
-        for i in range(len(self.scopes)):
-            index = len(self.scopes) - 1 - i
+        i = len(self.scopes) - 1
+        while i >= 0:
             if self.scopes[i].get(name.lexeme) is not None:
-                self.interpreter.resolve(expr, index)
+                self.interpreter.resolve(expr, len(self.scopes)-1-i)
                 if is_read: 
                     self.scopes[i].get(name.lexeme).state = VariableState.READ
                 return
+            i = i - 1
