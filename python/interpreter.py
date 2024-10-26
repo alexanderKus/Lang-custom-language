@@ -1,6 +1,7 @@
 
 from tokens import TokenKind
 from common import RunTimeError, Return, BreakException, Environment, Visitor
+from klass import LangClass, LangInstance
 from expr import *
 from stmt import *
 from function import *
@@ -33,6 +34,15 @@ class Interpreter(Visitor):
         if isinstance(obj, str):
             return f'"{obj}"'
         return str(obj)
+    
+    def visit_class_stmt(self, stmt):
+        self.env.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            function = LangFunction(method.name.lexeme, method.function, self.env)
+            methods[method.name.lexeme] = function
+        klass = LangClass(stmt.name.lexeme, methods)
+        self.env.assign(stmt.name, klass)
     
     def visit_function_stmt(self, stmt):
         name = stmt.name.lexeme
@@ -81,6 +91,23 @@ class Interpreter(Visitor):
     def visit_break_stmt(self, stmt):
         raise BreakException(stmt.name)
     
+    def visit_this_expr(self, expr):
+        return self.look_up_variable(expr.keyword, expr)
+    
+    def visit_get_expr(self, expr):
+        obj = self.evaluate(expr.object)
+        if isinstance(obj, LangInstance):
+            return obj.get(expr.name)
+        raise RunTimeError(expr.name, 'Only instances have properties.')
+
+    def visit_set_expr(self, expr):
+        obj = self.evaluate(expr.object)
+        if not isinstance(obj, LangInstance):
+            raise RunTimeError(expr.name, 'Only instances have fields')
+        value = self.evaluate(expr.value)
+        obj.set(expr.name, value)
+        return value
+
     def visit_logical_expr(self, expr):
         left = self.evaluate(expr.left)
         if expr.operator.kind == TokenKind.OR:

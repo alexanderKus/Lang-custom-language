@@ -1,0 +1,25 @@
+class Car {}
+var c = Car();
+print c;
+
+c.engine = "engine 1";
+print c.engine;
+c.engine = "engine 2";
+print c.engine;
+
+class Bacon {
+  eat() {
+    print "Crunch crunch crunch!";
+  }
+}
+Bacon().eat();
+
+class Cake {
+  taste() {
+    var adjective = "delicious";
+    print "The " + this.flavor + " cake is " + adjective + "!";
+  }
+}
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste(); 

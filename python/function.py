@@ -40,3 +40,8 @@ class LangFunction(LangCallable):
 
     def arity(self):
         return len(self.declaration.params)
+
+    def bind(self, instance):
+        env = Environment(self.closure)
+        env.define('this', instance)
+        return LangFunction(self.name, self.declaration, env)

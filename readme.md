@@ -16,9 +16,11 @@
 
 ```
 program      -> declaration* OEF ;
-declaration  -> funDecl
+declaration  -> classDecl
+                | funDecl
                 | varDecl
                 | statement ;
+classDecl    -> "class" IDENTIFIER "{" function* "}"
 funDecl      -> "fun" function ;
 function     -> IDENTIFIER functionBody;
 functionBody -> "(" parameters? ")" block ;
@@ -42,7 +44,7 @@ returnStmt   -> "return" expression? ";" ;
 whileStmt    -> "while" "(" expression ")" statement ;
 block        -> "{" declaration* "}" ;
 expression   -> assignment ;
-assignment   -> IDENTIFIER "=" assignment
+assignment   -> ( call "." )? IDENTIFIER "=" assignment
                 | logic_or ;
 logic_or     -> logic_and ( "or" logic_and )* ;
 logic and    -> equality ( "and" equality )* ;
@@ -52,7 +54,7 @@ term         -> factor ( ( "-" | "+" ) factor )* ;
 factor       -> unary ( ( "/" | "*" ) unary )* ;
 unary        -> ( "!" | "-" ) unary
                 | call ;
-call         -> primary ( "(" arguments? ")" )
+call         -> primary ( "(" arguments? ")" | "." IDENTIFIER)* ;
 primary      -> NUMBER | STRING | "true" | "false" | "nil"
                 | "(" expression ")" ;
                 | IDENTIFIER ;

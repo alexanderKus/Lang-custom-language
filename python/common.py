@@ -81,6 +81,9 @@ class Environment:
 # TODO: instead of pass raise NotImplemented exception
 class Visitor:
     # Statements
+    def visit_class_stmt(self, stmt):
+        pass
+
     def visit_function_stmt(self, stmt):
         pass
 
@@ -109,6 +112,15 @@ class Visitor:
         pass
 
     # Expressions
+    def visit_this_expr(self, expr):
+        pass
+
+    def visit_get_expr(self, expr):
+        pass
+
+    def visit_set_expr(self, expr):
+        pass
+
     def visit_function_expr(self, expr):
         pass
     

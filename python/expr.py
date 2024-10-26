@@ -10,6 +10,31 @@ class Expr:
     def accept(self, visitor):
         pass
 
+class ThisExpr(Expr):
+    def __init__(self, keyword):
+        self.keyword = keyword
+     
+    def accept(self, visitor):
+        return visitor.visit_this_expr(self)
+
+
+class GetExpr(Expr):
+    def __init__(self, object, name):
+        self.object = object
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_get_expr(self)
+
+class SetExpr(Expr):
+    def __init__(self, object, name, value):
+        self.object = object
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor):
+        return visitor.visit_set_expr(self)
+
 class FunctionExpr(Expr):
     def __init__(self, params, body):
         self.params = params

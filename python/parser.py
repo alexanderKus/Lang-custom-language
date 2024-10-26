@@ -1,5 +1,3 @@
-
-import sys
 from tokens import TokenKind, Token
 from expr import *
 from stmt import *
@@ -28,6 +26,8 @@ class Parser:
     
     def declaration(self):
         try:
+            if self.match(TokenKind.CLASS):
+                return self.class_declaration()
             if self.check(TokenKind.FUN) and self.check_next(TokenKind.IDENTIFIER):
                 self.consume(TokenKind.FUN, '')
                 return self.function('function');
@@ -37,6 +37,15 @@ class Parser:
         except ParseError:
             self.synchronize()
         return None
+    
+    def class_declaration(self):
+        name = self.consume(TokenKind.IDENTIFIER, 'Expect class name')
+        self.consume(TokenKind.LEFT_BRACE, 'Expect "{" before class body')
+        methods = []
+        while not self.check(TokenKind.RIGHT_BRACE) and not self.is_at_end():
+            methods.append(self.function("method"))
+        self.consume(TokenKind.RIGHT_BRACE, 'Expect "}" after class body')
+        return ClassStmt(name, methods)
     
     def function(self, kind):
         name = self.consume(TokenKind.IDENTIFIER, f'Expect {kind} name')
@@ -179,6 +188,8 @@ class Parser:
             value = self.assignment()
             if isinstance(expr, VariableExpr):
                 return AssignExpr(expr.name, value)
+            elif isinstance(expr, GetExpr):
+                return SetExpr(expr.object, expr.name, value)
             self.error(equals, 'Invalid assignment target')
         return expr
     
@@ -242,6 +253,9 @@ class Parser:
         while True:
             if self.match(TokenKind.LEFT_PAREN):
                 expr = self.finish_call(expr)
+            elif self.match(TokenKind.DOT):
+                name = self.consume(TokenKind.IDENTIFIER, 'Expect property name after "."')
+                expr = GetExpr(expr, name)
             else:
                 break
         return expr
@@ -268,6 +282,8 @@ class Parser:
             return LiteralExpr(None)
         if self.match(TokenKind.NUMBER, TokenKind.STRING):
             return LiteralExpr(self.previous().literal)
+        if self.match(TokenKind.THIS):
+            return ThisExpr(self.previous())
         if self.match(TokenKind.IDENTIFIER):
             return VariableExpr(self.previous())
         if self.match(TokenKind.LEFT_PAREN):

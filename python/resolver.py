@@ -4,6 +4,11 @@ from enum import Enum
 class FunctionType(Enum):
     NONE = 1,
     FUNCTION = 2
+    METHOD = 3
+
+class ClassType(Enum):
+    NONE = 0,
+    CLASS = 1
 
 class VariableState(Enum):
     DECLARED = 0,
@@ -23,6 +28,7 @@ class Resolver(Visitor):
         self.eh = eh
         self.scopes = []
         self.current_function = FunctionType.NONE
+        self.current_class = ClassType.NONE
         self.inside_loop = False
 
     def resolve(self, stmts):
@@ -42,6 +48,19 @@ class Resolver(Visitor):
             if entry.state == VariableState.DEFINED:
                 # self.eh.errorT(entry.name, 'Local variable is not used')
                 self.eh.warningT(entry.name, 'local variable is not used')
+    
+    def visit_class_stmt(self, stmt):
+        enclosing_class = self.current_class
+        self.current_class = ClassType.CLASS
+        self.declare(stmt.name)
+        self.define(stmt.name)
+        self.begin_scope()
+        self.scopes[-1]['this'] = Variable(stmt.name, VariableState.DEFINED)
+        for method in stmt.methods:
+            declaration = FunctionType.METHOD
+            self.resolve_function(method, declaration)
+        self.end_scope()
+        self.current_class = enclosing_class
 
     def visit_function_stmt(self, stmt):
         self.declare(stmt.name)
@@ -113,6 +132,19 @@ class Resolver(Visitor):
             self.define(param)
         self.resolve(expr.body)
         self.end_scope()
+
+    def visit_this_expr(self, expr):
+        if self.current_class == ClassType.NONE:
+            self.eh.error(expr.keyword, 'Cannot use "this" outside of a class')
+            return None
+        self.resolve_local(expr, expr.keyword, False)
+
+    def visit_get_expr(self, expr):
+        self._resolve(expr.object)
+
+    def visit_set_expr(self, expr):
+        self._resolve(expr.value)
+        self._resolve(expr.object)
     
     def visit_logical_expr(self, expr):
         self._resolve(expr.left)

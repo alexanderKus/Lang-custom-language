@@ -2,6 +2,14 @@ class Stmt:
     def accept(self, visitor):
         pass
 
+class ClassStmt(Stmt):
+    def __init__(self, name, methods):
+        self.name = name
+        self.methods = methods
+
+    def accept(self, visitor):
+        return visitor.visit_class_stmt(self)
+
 class FunctionStmt(Stmt):
     def __init__(self, name, function):
         self.name = name

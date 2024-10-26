@@ -22,7 +22,7 @@ class Lang:
         while True:
             line = input('> ')
             if line != '' and line != None:
-                self.run(line)
+                self.run(line, True)
                 self.had_error = False
 
     def run_file(self, source_file):
@@ -39,7 +39,7 @@ class Lang:
         if self.had_runtime_error:
             exit(70)
 
-    def run(self, source_code):
+    def run(self, source_code, is_prompt=False):
         if source_code == 'exit()': exit(0)
         lexer = Lexer(source_code, self.eh)
         tokens = lexer.tokenize()
@@ -55,9 +55,10 @@ class Lang:
         # NOTE: sometimes stmts may contains None values,
         # skipping them may be a good idea, to run interpreter on valid statements
         try:
+            # TODO: come up with better solution then generator.
             gen = self.interpreter.interpret(stmts)
-            for v in [g for g in gen if g is not None]:
-                print(v)
+            for v in [g for g in gen if g is not None]: 
+                if is_prompt: print(v)
         except RunTimeError as e:
             self.eh.runtime_error(e)
 
