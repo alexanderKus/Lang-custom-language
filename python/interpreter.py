@@ -51,7 +51,7 @@ class Interpreter(Visitor):
         self.env.define(name, func)
     
     def visit_function_expr(self, expr):
-        return LangFunction('', expr, self.env)
+        return LangFunction('', expr, self.env, False)
 
     def visit_if_stmt(self, stmt):
         if self.is_truthy(self.evaluate(stmt.condition)):
