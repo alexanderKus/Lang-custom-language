@@ -15,6 +15,7 @@ class VariableState(Enum):
     DECLARED = 0,
     DEFINED = 1,
     READ = 3
+    CLASS_NAME = 4
 
 class Variable:
     def __init__(self, name, state):
@@ -56,7 +57,7 @@ class Resolver(Visitor):
         self.declare(stmt.name)
         self.define(stmt.name)
         self.begin_scope()
-        self.scopes[-1]['this'] = Variable(stmt.name, VariableState.DEFINED)
+        self.scopes[-1]['this'] = Variable(stmt.name, VariableState.CLASS_NAME)
         for method in stmt.methods:
             declaration = FunctionType.METHOD
             if method.name.lexeme == 'init':
