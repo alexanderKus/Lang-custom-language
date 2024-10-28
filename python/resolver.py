@@ -5,6 +5,7 @@ class FunctionType(Enum):
     NONE = 1,
     FUNCTION = 2
     METHOD = 3
+    INITIALIZER = 4
 
 class ClassType(Enum):
     NONE = 0,
@@ -58,6 +59,8 @@ class Resolver(Visitor):
         self.scopes[-1]['this'] = Variable(stmt.name, VariableState.DEFINED)
         for method in stmt.methods:
             declaration = FunctionType.METHOD
+            if method.name.lexeme == 'init':
+                declaration = FunctionType.INITIALIZER
             self.resolve_function(method, declaration)
         self.end_scope()
         self.current_class = enclosing_class
@@ -89,6 +92,8 @@ class Resolver(Visitor):
         if self.current_function is FunctionType.NONE:
             self.eh.error(stmt.keyword, 'Cannot return from top-level code')
         if stmt.value is not None:
+            if self.current_function is FunctionType.INITIALIZER:
+                self.eh.error(stmt.keyword, 'Cannot return a value from an initializer')
             self._resolve(stmt.value)
 
     def visit_while_stmt(self, stmt):

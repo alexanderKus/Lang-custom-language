@@ -39,14 +39,15 @@ class Interpreter(Visitor):
         self.env.define(stmt.name.lexeme, None)
         methods = {}
         for method in stmt.methods:
-            function = LangFunction(method.name.lexeme, method.function, self.env)
+            is_initializer = method.name.lexeme == 'init'
+            function = LangFunction(method.name.lexeme, method.function, self.env, is_initializer)
             methods[method.name.lexeme] = function
         klass = LangClass(stmt.name.lexeme, methods)
         self.env.assign(stmt.name, klass)
     
     def visit_function_stmt(self, stmt):
         name = stmt.name.lexeme
-        func = LangFunction(name, stmt.function, self.env)
+        func = LangFunction(name, stmt.function, self.env, False)
         self.env.define(name, func)
     
     def visit_function_expr(self, expr):

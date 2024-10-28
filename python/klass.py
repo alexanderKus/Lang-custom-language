@@ -11,13 +11,19 @@ class LangClass(LangCallable):
   
     def call(self, interpreter, arguments):
         instance = LangInstance(self)
+        initializer = self.find_method('init')
+        if initializer is not None:
+            initializer.bind(instance).call(interpreter, arguments)
         return instance
     
     def find_method(self, name):
         return self.methods.get(name)
 
     def arity(self):
-        return 0
+        initializer = self.find_method('init')
+        if initializer is None:
+            return 0
+        return initializer.arity()
 
 class LangInstance:
     def __init__(self, klass):

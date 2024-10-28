@@ -19,10 +19,11 @@ class Clock(LangCallable):
         return 0
 
 class LangFunction(LangCallable):
-    def __init__(self, name, declaration, closure):
+    def __init__(self, name, declaration, closure, is_initializer):
         self.name = name
         self.declaration = declaration
         self.closure = closure
+        self.is_initializer = is_initializer
     
     def __str__(self):
         if self.name is None:
@@ -36,7 +37,12 @@ class LangFunction(LangCallable):
         try:
             interpreter.execute_block(self.declaration.body, env)
         except Return as r:
+            if self.is_initializer:
+                return self.closure.get_at(0, 'this')
             return r.value
+        if self.is_initializer:
+            return self.closure.get_at(0, 'this')
+        return None
 
     def arity(self):
         return len(self.declaration.params)
@@ -44,4 +50,4 @@ class LangFunction(LangCallable):
     def bind(self, instance):
         env = Environment(self.closure)
         env.define('this', instance)
-        return LangFunction(self.name, self.declaration, env)
+        return LangFunction(self.name, self.declaration, env, self.is_initializer)
