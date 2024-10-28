@@ -78,72 +78,71 @@ class Environment:
         return env
 
 
-# TODO: instead of pass raise NotImplemented exception
 class Visitor:
     # Statements
     def visit_class_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_function_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_if_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_var_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_expression_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_print_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_return_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_while_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_block_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     def visit_break_stmt(self, stmt):
-        pass
+        raise NotImplementedError()
 
     # Expressions
     def visit_this_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_get_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_set_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_function_expr(self, expr):
-        pass
+        raise NotImplementedError()
     
     def visit_logical_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_call_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_variable_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_assign_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_binary_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_grouping_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_literal_expr(self, expr):
-        pass
+        raise NotImplementedError()
 
     def visit_unary_expr(self, expr):
-        pass
+        raise NotImplementedError()
