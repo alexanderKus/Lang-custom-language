@@ -36,13 +36,18 @@ class Interpreter(Visitor):
         return str(obj)
     
     def visit_class_stmt(self, stmt):
+        super_class = None
+        if stmt.super_class is not None:
+            super_class = self.evaluate(stmt.super_class)
+            if not isinstance(super_class, LangClass):
+                raise RunTimeError(stmt.super_class.name, ' Super class must be a class')
         self.env.define(stmt.name.lexeme, None)
         methods = {}
         for method in stmt.methods:
             is_initializer = method.name.lexeme == 'init'
             function = LangFunction(method.name.lexeme, method.function, self.env, is_initializer)
             methods[method.name.lexeme] = function
-        klass = LangClass(stmt.name.lexeme, methods)
+        klass = LangClass(stmt.name.lexeme, super_class, methods)
         self.env.assign(stmt.name, klass)
     
     def visit_function_stmt(self, stmt):

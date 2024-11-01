@@ -56,6 +56,10 @@ class Resolver(Visitor):
         self.current_class = ClassType.CLASS
         self.declare(stmt.name)
         self.define(stmt.name)
+        if stmt.super_class is not None and stmt.name.lexeme == stmt.super_class.name.lexeme:
+            self.eh.errorT(stmt.super_class.name, 'A class cannot inherit from itself')
+        if stmt.super_class is not None:
+            self._resolve(stmt.super_class)
         self.begin_scope()
         self.scopes[-1]['this'] = Variable(stmt.name, VariableState.CLASS_NAME)
         for method in stmt.methods:

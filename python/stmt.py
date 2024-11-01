@@ -3,8 +3,9 @@ class Stmt:
         pass
 
 class ClassStmt(Stmt):
-    def __init__(self, name, methods):
+    def __init__(self, name, super_class, methods):
         self.name = name
+        self.super_class = super_class
         self.methods = methods
 
     def accept(self, visitor):

@@ -2,8 +2,9 @@ from function import LangCallable
 from common import RunTimeError
 
 class LangClass(LangCallable):
-    def __init__(self, name, methods):
+    def __init__(self, name, super_class, methods):
         self.name = name
+        self.super_class = super_class
         self.methods = methods
 
     def __str__(self):
@@ -17,7 +18,11 @@ class LangClass(LangCallable):
         return instance
     
     def find_method(self, name):
-        return self.methods.get(name)
+        if name in self.methods:
+            return self.methods.get(name)
+        if self.super_class is not None:
+            return self.super_class.find_method(name)
+        return None
 
     def arity(self):
         initializer = self.find_method('init')
