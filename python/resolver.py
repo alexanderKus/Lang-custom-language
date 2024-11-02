@@ -9,7 +9,8 @@ class FunctionType(Enum):
 
 class ClassType(Enum):
     NONE = 0,
-    CLASS = 1
+    CLASS = 1,
+    SUBCLASS = 2
 
 class VariableState(Enum):
     DECLARED = 0,
@@ -59,6 +60,7 @@ class Resolver(Visitor):
         if stmt.super_class is not None and stmt.name.lexeme == stmt.super_class.name.lexeme:
             self.eh.errorT(stmt.super_class.name, 'A class cannot inherit from itself')
         if stmt.super_class is not None:
+            self.current_class = ClassType.SUBCLASS
             self._resolve(stmt.super_class)
         if stmt.super_class is not None:
             self.begin_scope()
@@ -149,6 +151,10 @@ class Resolver(Visitor):
         self.end_scope()
     
     def visit_super_expr(self, expr):
+        if self.current_class == ClassType.NONE:
+            self.eh.errorT(expr.keyword, 'Cannot use "super" outside of a class')
+        elif self.current_class is not ClassType.SUBCLASS:
+            self.eh.errorT(expr.keyword, 'Cannot use "super" is a class with no superclass')
         self.resolve_local(expr, expr.keyword, True)
 
     def visit_this_expr(self, expr):
