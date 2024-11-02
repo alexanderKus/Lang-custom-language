@@ -42,12 +42,18 @@ class Interpreter(Visitor):
             if not isinstance(super_class, LangClass):
                 raise RunTimeError(stmt.super_class.name, ' Super class must be a class')
         self.env.define(stmt.name.lexeme, None)
+        if stmt.super_class is not None:
+            self.env = Environment(self.env)
+            self.env.define('super', super_class)
         methods = {}
         for method in stmt.methods:
             is_initializer = method.name.lexeme == 'init'
             function = LangFunction(method.name.lexeme, method.function, self.env, is_initializer)
             methods[method.name.lexeme] = function
+        if stmt.super_class is not None:
+            self.env = self.env.enclosing
         klass = LangClass(stmt.name.lexeme, super_class, methods)
+
         self.env.assign(stmt.name, klass)
     
     def visit_function_stmt(self, stmt):
@@ -96,6 +102,16 @@ class Interpreter(Visitor):
     
     def visit_break_stmt(self, stmt):
         raise BreakException(stmt.name)
+
+    def visit_super_expr(self, expr):
+        distance = self.locals[expr]
+        super_class = self.env.get_at(distance, 'super')
+        obj = self.env.get_at(distance-1, 'this')
+        method = super_class.find_method(expr.method.lexeme)
+        if method is None:
+            raise RunTimeError(expr.method, f'Undefined property {expr.method.lexeme}')
+        return method.bind(obj)
+
     
     def visit_this_expr(self, expr):
         return self.look_up_variable(expr.keyword, expr)

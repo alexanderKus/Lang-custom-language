@@ -60,6 +60,9 @@ class Resolver(Visitor):
             self.eh.errorT(stmt.super_class.name, 'A class cannot inherit from itself')
         if stmt.super_class is not None:
             self._resolve(stmt.super_class)
+        if stmt.super_class is not None:
+            self.begin_scope()
+            self.scopes[-1]['super'] = Variable('super', VariableState.DECLARED)
         self.begin_scope()
         self.scopes[-1]['this'] = Variable(stmt.name, VariableState.CLASS_NAME)
         for method in stmt.methods:
@@ -68,6 +71,8 @@ class Resolver(Visitor):
                 declaration = FunctionType.INITIALIZER
             self.resolve_function(method, declaration)
         self.end_scope()
+        if stmt.super_class is not None:
+            self.end_scope()
         self.current_class = enclosing_class
 
     def visit_function_stmt(self, stmt):
@@ -142,6 +147,9 @@ class Resolver(Visitor):
             self.define(param)
         self.resolve(expr.body)
         self.end_scope()
+    
+    def visit_super_expr(self, expr):
+        self.resolve_local(expr, expr.keyword, True)
 
     def visit_this_expr(self, expr):
         if self.current_class == ClassType.NONE:

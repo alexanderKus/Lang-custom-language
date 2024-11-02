@@ -55,9 +55,9 @@ factor       -> unary ( ( "/" | "*" ) unary )* ;
 unary        -> ( "!" | "-" ) unary
                 | call ;
 call         -> primary ( "(" arguments? ")" | "." IDENTIFIER)* ;
-primary      -> NUMBER | STRING | "true" | "false" | "nil"
+primary      -> NUMBER | STRING | IDENTIFIER | "true" | "false" | "nil" | "this
                 | "(" expression ")" ;
-                | IDENTIFIER ;
+                | "super" "." IDENTIFIER
                 | functionBody;
 arguments    -> expression ( "," expression )* ;
 ```
