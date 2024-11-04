@@ -1,9 +1,8 @@
 # LANG a custom language
 
-- Two Implementations: Python and C (maybe rust in future).
+- Implemented with Python
 - Has REPL.
 - Dynamically typed.
-- Hand-written GC (garbage collector) in C implementation.
 - Build in data types: `boolean`, `number` (just IEEE-754), `string` and `nil`
 - Supports classes
 
@@ -64,6 +63,69 @@ arguments    -> expression ( "," expression )* ;
 
 ### EXAMPLES
 
+Example #1
+
 ```
-coming soon...
+for(var i = 0; i < 10; i = i + 1) {
+  print "Hello, World!";
+  if (i == 2) break;
+}
+```
+
+Result:
+
+```
+"Hello, World!"
+"Hello, World!"
+"Hello, World!"
+```
+
+Example #2
+
+```
+class Base {
+  foo() {
+    print "foo";
+  }
+}
+
+class Square < Base {
+  init(n) {
+    this.n = n;
+  }
+  calc() {
+    return this.n * 2;
+  }
+}
+
+class Rectangle < Base {
+  init(a, b) {
+    this.a = a;
+    this.b = b;
+  }
+  calc() {
+    return this.a * this.b;
+  }
+
+  foo() {
+    print "boo";
+  }
+}
+
+var s = Square(10);
+var r = Rectangle(25, 2);
+print "Square: " + s.calc();
+print "Rectangle: " + r.calc();
+s.foo();
+r.foo();
+```
+
+Result
+
+```
+Square: 20
+Rectangle: 50
+
+"foo"
+"boo"
 ```

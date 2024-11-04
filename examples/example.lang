@@ -1,0 +1,41 @@
+class Base {
+  foo() {
+    print "foo";
+  }
+}
+
+class Square < Base {
+  init(n) {
+    this.n = n;
+  }
+  calc() {
+    return this.n * 2;
+  }
+}
+
+class Rectangle < Base {
+  init(a, b) {
+    this.a = a;
+    this.b = b;
+  }
+  calc() {
+    return this.a * this.b;
+  }
+
+  foo() {
+    print "boo";
+  }
+}
+
+var s = Square(10);
+var r = Rectangle(25, 2);
+print "Square: " + s.calc();
+print "Rectangle: " + r.calc();
+s.foo();
+r.foo();
+
+for(var i = 0; i < 10; i = i + 1) {
+  print "Hello, World!";
+  if (i == 2) break;
+}
+
