@@ -5,6 +5,15 @@ from stmt import Stmt
 
 
 class AstPrinter(Visitor):
+    def visit_class_stmt(self, stmt):
+        b = f'(class {stmt.name.lexeme}'
+        if stmt.super_class is not None:
+            b += f'< {self.printExpr(stmt.super_class)}'
+        for method in stmt.methods:
+            b += f' {self.printStmt(method)}'
+        b += ')'
+        return b
+
     def visit_function_stmt(self, stmt):
         return f'(fun {stmt.name.lexeme} (' + \
           ' '.join([param.lexeme if param is stmt.function.params[0] else ' ' for param in stmt.function.params]) + \
@@ -43,6 +52,18 @@ class AstPrinter(Visitor):
         return '(break)'
 
     # Expressions
+    def visit_super_expr(self, expr):
+        return self.parenthesize2('super', expr.method)
+
+    def visit_this_expr(self, expr):
+        return 'this'
+
+    def visit_get_expr(self, expr):
+        return self.parenthesize2('.', expr.object, expr.name.lexeme)
+
+    def visit_set_expr(self, expr):
+        return self.parenthesize2('=', expr.object, expr.name.lexeme, expr.value)
+
     def visit_function_expr(self, expr):
         return '(' + ' '.join(param.lexeme for param in expr.params) + ')'
 
