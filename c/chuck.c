@@ -8,8 +8,7 @@ void initChunk(Chunk* chunk) {
   chunk->count = 0;
   chunk->lines = NULL;
   chunk->code = NULL;
-  chunk->constants = (ValueArray*)malloc(sizeof(ValueArray*));
-  initValueArray(chunk->constants);
+  initValueArray(&chunk->constants);
 }
 
 void writeChunk(Chunk* chunk, uint8_t byte, int line) {
@@ -25,13 +24,13 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 }
 
 int addConstant(Chunk* chunk, Value value) {
-  writeValueArray(chunk->constants, value);
-  return chunk->constants->count - 1;
+  writeValueArray(&chunk->constants, value);
+  return chunk->constants.count - 1;
 }
 
 void freeChunk(Chunk* chunk) {
   FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
   FREE_ARRAY(int, chunk->lines, chunk->capacity);
-  freeValueArray(chunk->constants);
+  freeValueArray(&chunk->constants);
   initChunk(chunk);
 }
