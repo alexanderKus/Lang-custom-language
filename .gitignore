@@ -3,3 +3,6 @@ python/__pycache__/*
 in_different_languages/csharp/bin/*
 in_different_languages/csharp/obj/*
 lang_tests/*
+
+c/*.o
+c/clang
